@@ -7,7 +7,7 @@
 set -e
 
 RADXA_RAW="https://raw.githubusercontent.com/radxa-pkg/aic8800/main/debian/patches"
-PATCH_DIR="patches"
+PATCH_DIR="aic8800-sdio/patches"
 
 declare -A PATCHES=(
   ["fix-sdio-firmware-path.patch"]="010-fix-sdio-firmware-path.patch"

@@ -22,7 +22,7 @@ jobs:
 
       - name: Download patches from radxa-pkg/aic8800
         run: |
-          cd patches
+          cd aic8800-sdio/patches
           RADXA_RAW="https://raw.githubusercontent.com/radxa-pkg/aic8800/main/debian/patches"
           declare -A MAP=(
             ["fix-sdio-firmware-path.patch"]="010-fix-sdio-firmware-path.patch"
