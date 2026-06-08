@@ -1,0 +1,71 @@
+name: Build AIC8800 SDIO
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build kmod-aic8800-sdio (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - aarch64_generic-25.12.4
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download patches from radxa-pkg/aic8800
+        run: |
+          cd patches
+          RADXA_RAW="https://raw.githubusercontent.com/radxa-pkg/aic8800/main/debian/patches"
+          declare -A MAP=(
+            ["fix-sdio-firmware-path.patch"]="010-fix-sdio-firmware-path.patch"
+            ["fix-sdio-fall-through.patch"]="020-fix-sdio-fall-through.patch"
+            ["fix-debug-file-with-no-debug-symbols.patch"]="030-fix-debug-file-with-no-debug-symbols.patch"
+            ["fix-linux-6.1-build.patch"]="040-fix-linux-6.1-build.patch"
+            ["fix-linux-6.5-build.patch"]="050-fix-linux-6.5-build.patch"
+            ["fix-linux-6.7-build.patch"]="060-fix-linux-6.7-build.patch"
+            ["fix-linux-6.9-build.patch"]="070-fix-linux-6.9-build.patch"
+            ["fix-linux-6.13-build.patch"]="080-fix-linux-6.13-build.patch"
+            ["fix-linux-6.14-build.patch"]="090-fix-linux-6.14-build.patch"
+            ["fix-linux-6.15-build.patch"]="100-fix-linux-6.15-build.patch"
+            ["fix-linux-6.16-build.patch"]="110-fix-linux-6.16-build.patch"
+            ["fix-linux-6.17-build.patch"]="120-fix-linux-6.17-build.patch"
+            ["fix-linux-6.19-build.patch"]="130-fix-linux-6.19-build.patch"
+            ["fix-vmalloc-not-include.patch"]="140-fix-vmalloc-not-include.patch"
+            ["fix-Lower-the-debugging-log-level.patch"]="150-fix-Lower-the-debugging-log-level.patch"
+          )
+          for src in "${!MAP[@]}"; do
+            dst="${MAP[$src]}"
+            echo "Downloading $src -> $dst"
+            curl -sL "$RADXA_RAW/$src" -o "$dst"
+          done
+
+      - name: Build
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}
+          PACKAGES: kmod-aic8800-sdio aic8800-sdio-firmware
+          V: s
+
+      - name: Store packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: aic8800-sdio-${{ matrix.arch }}
+          path: |
+            bin/packages/*/packages/kmod-aic8800*.ipk
+            bin/packages/*/packages/aic8800*.ipk
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin/packages/*/packages/kmod-aic8800*.ipk
+            bin/packages/*/packages/aic8800*.ipk
