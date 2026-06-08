@@ -51,7 +51,7 @@ jobs:
         uses: openwrt/gh-action-sdk@main
         env:
           ARCH: ${{ matrix.arch }}
-          PACKAGES: kmod-aic8800-sdio aic8800-sdio-firmware
+          PACKAGES: aic8800-sdio
           V: s
 
       - name: Store packages
@@ -59,13 +59,15 @@ jobs:
         with:
           name: aic8800-sdio-${{ matrix.arch }}
           path: |
-            bin/packages/*/packages/kmod-aic8800*.ipk
-            bin/packages/*/packages/aic8800*.ipk
+            bin/packages/*/action/kmod-aic8800*.ipk
+            bin/packages/*/action/aic8800*.ipk
+            bin/targets/*/packages/kmod-aic8800*.ipk
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/packages/*/packages/kmod-aic8800*.ipk
-            bin/packages/*/packages/aic8800*.ipk
+            bin/packages/*/action/kmod-aic8800*.ipk
+            bin/packages/*/action/aic8800*.ipk
+            bin/targets/*/packages/kmod-aic8800*.ipk
