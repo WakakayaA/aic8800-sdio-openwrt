@@ -55,9 +55,7 @@ endef
 EXTRA_CFLAGS += \
 	-DCONFIG_AIC8800_WLAN_SUPPORT=1 \
 	-DAICWF_SDIO_SUPPORT \
-	-Wno-error=missing-prototypes \
-	-Wno-error=missing-declarations \
-	-Wno-error=expansion-to-defined
+	-Wno-error
 
 MAKE_OPTS:= \
 	$(KERNEL_MAKE_FLAGS) \
