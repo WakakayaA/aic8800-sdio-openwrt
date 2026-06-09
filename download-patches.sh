@@ -24,7 +24,6 @@ declare -A PATCHES=(
   ["fix-linux-6.17-build.patch"]="120-fix-linux-6.17-build.patch"
   ["fix-linux-6.19-build.patch"]="130-fix-linux-6.19-build.patch"
   ["fix-vmalloc-not-include.patch"]="140-fix-vmalloc-not-include.patch"
-  ["fix-Lower-the-debugging-log-level.patch"]="150-fix-Lower-the-debugging-log-level.patch"
 )
 
 echo "Downloading patches from radxa-pkg/aic8800..."
