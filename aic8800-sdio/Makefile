@@ -30,9 +30,9 @@ define KernelPackage/aic8800-sdio
   TITLE:=AIC8800D80 Wi-Fi 6 SDIO driver
   DEPENDS:=+kmod-cfg80211 +kmod-mmc
   FILES:= \
-	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/drivers/aic8800/aic8800_fdrv/aic8800_fdrv.ko \
-	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/drivers/aic8800/aic_load_fw/aic_load_fw.ko
-  AUTOLOAD:=$(call AutoProbe,aic_load_fw aic8800_fdrv)
+	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aic8800_fdrv.ko \
+	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aic8800_bsp.ko
+  AUTOLOAD:=$(call AutoProbe,aic8800_bsp aic8800_fdrv)
 endef
 
 define KernelPackage/aic8800-sdio/description
@@ -56,12 +56,11 @@ EXTRA_CFLAGS += \
 	-DCONFIG_AIC8800_WLAN_SUPPORT=1 \
 	-DCONFIG_SDIO_SUPPORT=1 \
 	-DCONFIG_USB_SUPPORT=0 \
-	-DCONFIG_PCIE_SUPPORT=0 \
-	-DCONFIG_AIC_FW_PATH=\"/lib/firmware/aic8800D80\"
+	-DCONFIG_PCIE_SUPPORT=0
 
 MAKE_OPTS:= \
 	$(KERNEL_MAKE_FLAGS) \
-	M="$(PKG_BUILD_DIR)/src/SDIO/driver_fw/drivers/aic8800" \
+	M="$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800" \
 	KERNELDIR="$(LINUX_DIR)" \
 	EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
 
@@ -76,8 +75,8 @@ define KernelPackage/aic8800-sdio/install
 endef
 
 define Package/aic8800-sdio-firmware/install
-	$(INSTALL_DIR) $(1)/lib/firmware/aic8800D80
-	$(CP) $(PKG_BUILD_DIR)/src/SDIO/driver_fw/fw/aic8800D80/* $(1)/lib/firmware/aic8800D80/
+	$(INSTALL_DIR) $(1)/lib/firmware/aic8800_fw/SDIO/aic8800D80
+	$(CP) $(PKG_BUILD_DIR)/src/SDIO/driver_fw/fw/aic8800D80/* $(1)/lib/firmware/aic8800_fw/SDIO/aic8800D80/
 endef
 
 $(eval $(call KernelPackage,aic8800-sdio))
