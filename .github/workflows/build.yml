@@ -51,9 +51,15 @@ jobs:
         uses: openwrt/gh-action-sdk@main
         env:
           ARCH: ${{ matrix.arch }}
-          PACKAGES: aic8800-sdio
-          V: s
-          FIXUP: 1
+          V: sc
+
+      - name: Show build logs on failure
+        if: failure()
+        run: |
+          echo "=== Feed directory listing ==="
+          ls -la /home/runner/work/aic8800-sdio-openwrt/aic8800-sdio-openwrt/ || true
+          echo "=== Build logs ==="
+          find /home/runner/work/ -name "*.log" -exec tail -50 {} \; 2>/dev/null || true
 
       - name: Store packages
         uses: actions/upload-artifact@v4
