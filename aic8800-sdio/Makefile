@@ -54,15 +54,17 @@ endef
 
 EXTRA_CFLAGS += \
 	-DCONFIG_AIC8800_WLAN_SUPPORT=1 \
-	-DCONFIG_SDIO_SUPPORT=1 \
-	-DCONFIG_USB_SUPPORT=0 \
-	-DCONFIG_PCIE_SUPPORT=0
+	-DAICWF_SDIO_SUPPORT \
+	-Wno-error=missing-prototypes \
+	-Wno-error=missing-declarations \
+	-Wno-error=expansion-to-defined
 
 MAKE_OPTS:= \
 	$(KERNEL_MAKE_FLAGS) \
 	M="$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800" \
 	KERNELDIR="$(LINUX_DIR)" \
-	EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
+	EXTRA_CFLAGS="$(EXTRA_CFLAGS)" \
+	CONFIG_AIC8800_BTLPM_SUPPORT=n
 
 define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" \
