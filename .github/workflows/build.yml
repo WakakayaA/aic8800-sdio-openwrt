@@ -53,6 +53,7 @@ jobs:
           ARCH: ${{ matrix.arch }}
           PACKAGES: aic8800-sdio
           V: s
+          FIXUP: 1
 
       - name: Store packages
         uses: actions/upload-artifact@v4
