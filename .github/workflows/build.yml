@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         arch:
-          - rockchip_armv8-25.12-SNAPSHOT
+          - aarch64_generic-25.12.4
 
     steps:
       - uses: actions/checkout@v4
