@@ -65,15 +65,13 @@ jobs:
         with:
           name: aic8800-sdio-${{ matrix.arch }}
           path: |
-            bin/packages/*/action/aic8800*.apk
-            bin/targets/*/packages/kmod-aic8800*.apk
-            bin/packages/*/action/kmod-aic8800*.apk
+            bin/**/aic8800*.apk
+            bin/**/kmod-aic8800*.apk
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/packages/*/action/aic8800*.apk
-            bin/targets/*/packages/kmod-aic8800*.apk
-            bin/packages/*/action/kmod-aic8800*.apk
+            bin/**/aic8800*.apk
+            bin/**/kmod-aic8800*.apk
