@@ -35,8 +35,9 @@ jobs:
 
       - name: Clone OpenWrt
         run: |
-          git clone --depth 1 --branch ${{ env.OPENWRT_VERSION }} \
-            https://github.com/openwrt/openwrt.git openwrt
+          git clone https://github.com openwrt
+          cd openwrt
+          git checkout ba915c2ee711d047d5be8575c1e98699119429ab
 
       - name: Download patches from radxa-pkg/aic8800
         run: |
