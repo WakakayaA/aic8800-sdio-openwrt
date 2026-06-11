@@ -82,9 +82,9 @@ jobs:
           EOF
           make defconfig
           # Override vermagic to match installed kernel on device
-          echo "7c623aff607c2cd3e0412bd844ec50e4" > $(find . -path "*/rockchip/armv8/vermagic" 2>/dev/null || echo "target/linux/rockchip/armv8/vermagic")
           mkdir -p target/linux/rockchip/armv8
           echo "7c623aff607c2cd3e0412bd844ec50e4" > target/linux/rockchip/armv8/vermagic
+          find . -path "*/vermagic" -exec sh -c 'echo "7c623aff607c2cd3e0412bd844ec50e4" > "$1"' _ {} \;
 
       - name: Download sources
         run: |
