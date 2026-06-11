@@ -35,7 +35,7 @@ jobs:
 
       - name: Clone OpenWrt
         run: |
-          git clone https://github.com openwrt
+          git clone https://github.com/openwrt/openwrt.git
           cd openwrt
           git checkout ba915c2ee711d047d5be8575c1e98699119429ab
 
