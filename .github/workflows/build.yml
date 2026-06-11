@@ -37,7 +37,7 @@ jobs:
         run: |
           git clone https://github.com/openwrt/openwrt.git
           cd openwrt
-          git checkout ba915c2ee711d047d5be8575c1e98699119429ab
+          git checkout db273801a24e9367b4f989febc469888a2343e31
 
       - name: Download patches from radxa-pkg/aic8800
         run: |
