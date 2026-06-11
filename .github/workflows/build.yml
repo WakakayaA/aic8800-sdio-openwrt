@@ -81,6 +81,10 @@ jobs:
           CONFIG_PACKAGE_aic8800-sdio-firmware=m
           EOF
           make defconfig
+          # Override vermagic to match installed kernel on device
+          echo "7c623aff607c2cd3e0412bd844ec50e4" > $(find . -path "*/rockchip/armv8/vermagic" 2>/dev/null || echo "target/linux/rockchip/armv8/vermagic")
+          mkdir -p target/linux/rockchip/armv8
+          echo "7c623aff607c2cd3e0412bd844ec50e4" > target/linux/rockchip/armv8/vermagic
 
       - name: Download sources
         run: |
