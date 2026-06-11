@@ -74,17 +74,11 @@ jobs:
       - name: Configure for rockchip/armv8
         run: |
           cd openwrt
-          cat >> .config << 'EOF'
-          CONFIG_TARGET_rockchip=y
-          CONFIG_TARGET_rockchip_armv8=y
-          CONFIG_PACKAGE_kmod-aic8800-sdio=m
-          CONFIG_PACKAGE_aic8800-sdio-firmware=m
-          EOF
+          # Use official release config to match vermagic
+          wget -O .config https://downloads.openwrt.org/releases/25.12.4/targets/rockchip/armv8/config.buildinfo
+          echo "CONFIG_PACKAGE_kmod-aic8800-sdio=m" >> .config
+          echo "CONFIG_PACKAGE_aic8800-sdio-firmware=m" >> .config
           make defconfig
-          # Override vermagic to match installed kernel on device
-          mkdir -p target/linux/rockchip/armv8
-          echo "7c623aff607c2cd3e0412bd844ec50e4" > target/linux/rockchip/armv8/vermagic
-          find . -path "*/vermagic" -exec sh -c 'echo "7c623aff607c2cd3e0412bd844ec50e4" > "$1"' _ {} \;
 
       - name: Download sources
         run: |
