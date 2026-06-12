@@ -93,6 +93,37 @@ jobs:
           make toolchain/install -j$(nproc) V=s
           make target/linux/compile -j$(nproc) V=s
 
+      - name: Prepare aic8800-sdio source (download + patch)
+        run: |
+          cd openwrt
+          make package/aic8800-sdio/download V=s
+          make package/aic8800-sdio/prepare V=s || true
+
+      - name: Fix cfg80211 API for backports 6.18
+        run: |
+          cd openwrt
+          SRCDIR=$(find build_dir -type d -name "aic8800-sdio-*" | head -1)
+          FDRV="$SRCDIR/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv"
+          RADAR="$FDRV/rwnx_radar.c"
+          MAIN="$FDRV/rwnx_main.c"
+
+          echo "=== Fixing rwnx_main.c ==="
+          # Fix set_monitor_channel signature: add net_device parameter
+          sed -i 's/static int rwnx_cfg80211_set_monitor_channel(struct wiphy \*wiphy,$/static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy, struct net_device *dev,/' "$MAIN"
+          # Fix call to set_monitor_channel: add 0 parameter
+          sed -i 's/rwnx_cfg80211_set_monitor_channel(wiphy, NULL)/rwnx_cfg80211_set_monitor_channel(wiphy, 0, NULL)/' "$MAIN"
+          # Fix cfg80211_ch_switch_started_notify for backports 6.18
+          sed -i 's/cfg80211_ch_switch_started_notify(dev, &csa->chandef, params->count, params->block_tx)/cfg80211_ch_switch_started_notify(dev, \&csa->chandef, 0, params->count, params->block_tx)/' "$MAIN"
+
+          echo "=== Fixing rwnx_radar.c ==="
+          # Fix cfg80211_cac_event: add 5th argument (0)
+          sed -i 's/NL80211_RADAR_CAC_FINISHED, GFP_KERNEL)/NL80211_RADAR_CAC_FINISHED, GFP_KERNEL, 0)/' "$RADAR"
+          sed -i 's/NL80211_RADAR_CAC_ABORTED, GFP_KERNEL)/NL80211_RADAR_CAC_ABORTED, GFP_KERNEL, 0)/' "$RADAR"
+
+          echo "=== Verifying changes ==="
+          grep -n "set_monitor_channel" "$MAIN" | head -5
+          grep -n "cfg80211_cac" "$RADAR" | head -5
+
       - name: Build aic8800-sdio packages
         run: |
           cd openwrt
