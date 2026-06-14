@@ -103,26 +103,17 @@ jobs:
         run: |
           cd openwrt
           SRCDIR=$(find build_dir -type d -name "aic8800-sdio-*" | head -1)
-          FDRV="$SRCDIR/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv"
-          RADAR="$FDRV/rwnx_radar.c"
-          MAIN="$FDRV/rwnx_main.c"
+          MAIN="$SRCDIR/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c"
 
-          echo "=== Fixing rwnx_main.c ==="
-          # Fix set_monitor_channel signature: add net_device parameter
-          sed -i 's/static int rwnx_cfg80211_set_monitor_channel(struct wiphy \*wiphy,$/static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy, struct net_device *dev,/' "$MAIN"
-          # Fix call to set_monitor_channel: add 0 parameter
-          sed -i 's/rwnx_cfg80211_set_monitor_channel(wiphy, NULL)/rwnx_cfg80211_set_monitor_channel(wiphy, 0, NULL)/' "$MAIN"
-          # Fix cfg80211_ch_switch_started_notify for backports 6.18
-          sed -i 's/cfg80211_ch_switch_started_notify(dev, &csa->chandef, params->count, params->block_tx)/cfg80211_ch_switch_started_notify(dev, \&csa->chandef, 0, params->count, params->block_tx)/' "$MAIN"
-
-          echo "=== Fixing rwnx_radar.c ==="
-          # Fix cfg80211_cac_event: add 5th argument (0)
-          sed -i 's/NL80211_RADAR_CAC_FINISHED, GFP_KERNEL)/NL80211_RADAR_CAC_FINISHED, GFP_KERNEL, 0)/' "$RADAR"
-          sed -i 's/NL80211_RADAR_CAC_ABORTED, GFP_KERNEL)/NL80211_RADAR_CAC_ABORTED, GFP_KERNEL, 0)/' "$RADAR"
+          echo "=== Fixing set_monitor_channel: lower version check from 6.13 to 6.12 ==="
+          # The backports 6.18 cfg80211 expects set_monitor_channel with net_device* param (added in 6.13)
+          # But LINUX_VERSION_CODE is 6.12, so we need to lower the threshold
+          sed -i 's/KERNEL_VERSION (6, 13, 0)/KERNEL_VERSION (6, 12, 0)/g' "$MAIN"
+          sed -i 's/KERNEL_VERSION(6, 13, 0)/KERNEL_VERSION(6, 12, 0)/g' "$MAIN"
 
           echo "=== Verifying changes ==="
+          grep -n "KERNEL_VERSION.*6, 12, 0" "$MAIN" | head -10
           grep -n "set_monitor_channel" "$MAIN" | head -5
-          grep -n "cfg80211_cac" "$RADAR" | head -5
 
       - name: Build aic8800-sdio packages
         run: |
