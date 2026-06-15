@@ -106,14 +106,15 @@ jobs:
           MAIN="$SRCDIR/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c"
 
           echo "=== Fixing set_monitor_channel: lower version check from 6.13 to 6.12 ==="
-          # The backports 6.18 cfg80211 expects set_monitor_channel with net_device* param (added in 6.13)
-          # But LINUX_VERSION_CODE is 6.12, so we need to lower the threshold
           sed -i 's/KERNEL_VERSION (6, 13, 0)/KERNEL_VERSION (6, 12, 0)/g' "$MAIN"
           sed -i 's/KERNEL_VERSION(6, 13, 0)/KERNEL_VERSION(6, 12, 0)/g' "$MAIN"
 
+          echo "=== Fixing has_he = false to has_he = true for backports 6.18 wiphy_register ==="
+          sed -i 's/\.has_he = false,/.has_he = true,/g' "$MAIN"
+
           echo "=== Verifying changes ==="
+          grep -n "has_he" "$MAIN" | head -5
           grep -n "KERNEL_VERSION.*6, 12, 0" "$MAIN" | head -10
-          grep -n "set_monitor_channel" "$MAIN" | head -5
 
       - name: Build aic8800-sdio packages
         run: |
