@@ -64,8 +64,15 @@ jobs:
           sed -i 's|https://git.openwrt.org/feed/routing.git|https://github.com/openwrt/routing.git|' feeds.conf.default
           sed -i 's|https://git.openwrt.org/feed/telephony.git|https://github.com/openwrt/telephony.git|' feeds.conf.default
           cat feeds.conf.default
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # telephony/video feeds cause dump errors (freeswitch/kamailio/mesa) and aren't needed
+          # Disable them to avoid breaking feeds update
+          sed -i 's|^src-git telephony|#src-git telephony|' feeds.conf.default
+          sed -i 's|^src-git video|#src-git video|' feeds.conf.default
+          cat feeds.conf.default
+          ./scripts/feeds update -a 2>&1 | tail -30
+          ./scripts/feeds install -a 2>&1 | tail -20
+          echo "=== installed feeds ==="
+          ls feeds/
 
       - name: Configure rockchip/armv8 with M28K
         run: |
