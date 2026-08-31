@@ -68,21 +68,27 @@ jobs:
           cd openwrt
           echo "CONFIG_TARGET_rockchip=y" > .config
           echo "CONFIG_TARGET_rockchip_armv8=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_widora_mangopi-m28k=y" >> .config
           echo "CONFIG_PACKAGE_kmod-aic8800-sdio=m" >> .config
           echo "CONFIG_PACKAGE_aic8800-sdio-firmware=m" >> .config
           echo "CONFIG_PACKAGE_kmod-cfg80211=m" >> .config
           echo "CONFIG_PACKAGE_kmod-mac80211=m" >> .config
           make defconfig
           echo "=== Relevant config ==="
-          grep -E "aic8800|cfg80211|mac80211|CONFIG_TARGET_rockchip" .config | head -20
+          grep -E "CONFIG_TARGET_rockchip|CONFIG_TARGET_armv8|aic8800|cfg80211|mac80211" .config | head -30
 
       - name: Build kernel and driver (long step)
         run: |
           cd openwrt
           echo "Starting kernel + driver build at $(date)"
           # Compile the kernel (creates Module.symvers etc.) then the driver
-          make package/aic8800-sdio/compile V=s -j$(nproc) 2>&1 | tail -80
+          # Use timeout to prevent GitHub 6h limit; capture full log
+          timeout 300m make package/aic8800-sdio/compile V=s -j$(nproc) 2>&1 | tee /tmp/build_out.log | tail -100
           echo "Build finished at $(date)"
+          # Check for built .ko files
+          echo "=== Built .ko check ==="
+          find . -name "aic8800*.ko" 2>/dev/null | head
+          find . -name "cfg80211.ko" -o -name "mac80211.ko" -o -name "compat.ko" 2>/dev/null | head
 
       - name: Collect kernel modules and firmware
         run: |
