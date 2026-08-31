@@ -68,14 +68,22 @@ jobs:
         run: |
           cd lede
           echo "Starting host tools build at $(date)"
-          make tools/install V=s -j$(nproc) 2>&1 | tee /tmp/tools.log | tail -20
+          make tools/install V=s -j$(nproc) > /tmp/tools.log 2>&1; echo "tools rc=$?"
           echo "=== tools done at $(date) ==="
           echo "Starting toolchain build at $(date)"
-          make toolchain/install V=s -j$(nproc) 2>&1 | tee /tmp/toolchain.log | tail -20
+          make toolchain/install V=s -j$(nproc) > /tmp/toolchain.log 2>&1; echo "toolchain rc=$?"
           echo "=== toolchain done at $(date) ==="
-          echo "Starting kernel + driver build at $(date)"
-          timeout 300m make package/aic8800-sdio/compile V=s -j$(nproc) 2>&1 | tee /tmp/build_out.log | tail -100
-          echo "Build finished at $(date)"
+          echo "Starting kernel build at $(date)"
+          make target/linux/compile V=s -j$(nproc) > /tmp/kernel.log 2>&1; echo "kernel rc=$?"
+          echo "=== kernel done at $(date) ==="
+          echo "Starting aic8800 driver build at $(date)"
+          make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
+          echo "=== aic8800 build done at $(date) ==="
+          # Show tail of relevant logs
+          echo "===== kernel.log tail ====="
+          tail -20 /tmp/kernel.log
+          echo "===== aic8800.log tail ====="
+          tail -40 /tmp/aic8800.log
           echo "=== Built .ko check ==="
           find . -name "aic8800*.ko" 2>/dev/null | head
           find . -name "cfg80211.ko" -o -name "mac80211.ko" -o -name "compat.ko" 2>/dev/null | head
@@ -100,6 +108,12 @@ jobs:
           find output -name "*.ko" -exec ls -la {} \;
           echo "=== Output tree ==="
           find output -type f | head -40
+          # Save build logs for debugging
+          mkdir -p output/logs
+          cp /tmp/tools.log output/logs/ 2>/dev/null || true
+          cp /tmp/toolchain.log output/logs/ 2>/dev/null || true
+          cp /tmp/kernel.log output/logs/ 2>/dev/null || true
+          cp /tmp/aic8800.log output/logs/ 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
