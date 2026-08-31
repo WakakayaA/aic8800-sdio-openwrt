@@ -58,6 +58,12 @@ jobs:
         run: |
           cd openwrt
           echo "src-link aic8800 $GITHUB_WORKSPACE/aic8800-sdio-openwrt" >> feeds.conf.default
+          # Replace git.openwrt.org with GitHub mirrors (git.openwrt.org unreliable from GH Actions, 504)
+          sed -i 's|https://git.openwrt.org/feed/packages.git|https://github.com/openwrt/packages.git|' feeds.conf.default
+          sed -i 's|https://git.openwrt.org/feed/luci.git|https://github.com/openwrt/luci.git|' feeds.conf.default
+          sed -i 's|https://git.openwrt.org/feed/routing.git|https://github.com/openwrt/routing.git|' feeds.conf.default
+          sed -i 's|https://git.openwrt.org/feed/telephony.git|https://github.com/openwrt/telephony.git|' feeds.conf.default
+          sed -i 's|https://git.openwrt.org/feed/video.git|https://github.com/openwrt/video.git|' feeds.conf.default
           cat feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
