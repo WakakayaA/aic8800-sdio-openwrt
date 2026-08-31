@@ -66,14 +66,12 @@ jobs:
       - name: Configure rockchip/armv8
         run: |
           cd openwrt
-          cat > .config <<'EOF'
-CONFIG_TARGET_rockchip=y
-CONFIG_TARGET_rockchip_armv8=y
-CONFIG_PACKAGE_kmod-aic8800-sdio=m
-CONFIG_PACKAGE_aic8800-sdio-firmware=m
-CONFIG_PACKAGE_kmod-cfg80211=m
-CONFIG_PACKAGE_kmod-mac80211=m
-EOF
+          echo "CONFIG_TARGET_rockchip=y" > .config
+          echo "CONFIG_TARGET_rockchip_armv8=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-aic8800-sdio=m" >> .config
+          echo "CONFIG_PACKAGE_aic8800-sdio-firmware=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-cfg80211=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-mac80211=m" >> .config
           make defconfig
           echo "=== Relevant config ==="
           grep -E "aic8800|cfg80211|mac80211|CONFIG_TARGET_rockchip" .config | head -20
