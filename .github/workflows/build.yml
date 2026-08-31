@@ -50,8 +50,16 @@ jobs:
           cp -rn lede_tmp/target/linux/rockchip target/linux/rockchip
           cp -rn lede_tmp/package/boot package/boot
           rm -rf lede_tmp
+          echo "=== Fix rockchip Makefile (like Kwrt diy.sh) ==="
+          # Remove KERNEL_TESTING_PATCHVER (6.18 not supported by official 25.12)
+          sed -i '/KERNEL_TESTING_PATCHVER/d' target/linux/rockchip/Makefile
+          # Fix DEFAULT_PACKAGES: replace lede-only packages with official-compatible ones
+          sed -i '/DEFAULT_PACKAGES/d' target/linux/rockchip/Makefile
+          sed -i '/include $(INCLUDE_DIR)\/target.mk/a DEFAULT_PACKAGES += uboot-envtools partx-utils e2fsprogs mkf2fs kmod-gpio-button-hotplug automount ethtool haveged usb-modeswitch' target/linux/rockchip/Makefile
           echo "=== KERNEL_PATCHVER ==="
           grep KERNEL_PATCHVER target/linux/rockchip/Makefile
+          echo "=== DEFAULT_PACKAGES ==="
+          grep DEFAULT_PACKAGES target/linux/rockchip/Makefile
           echo "=== armv8 config exists ==="
           ls target/linux/rockchip/armv8/ | head
 
@@ -74,15 +82,25 @@ jobs:
           echo "CONFIG_PACKAGE_kmod-cfg80211=m" >> .config
           echo "CONFIG_PACKAGE_kmod-mac80211=m" >> .config
           make defconfig
-          echo "=== Relevant config ==="
-          grep -E "CONFIG_TARGET_rockchip|CONFIG_TARGET_armv8|aic8800|cfg80211|mac80211" .config | head -30
+          echo "=== TARGET config (diagnostic) ==="
+          grep -E "^CONFIG_TARGET" .config | head -30
+          echo "=== Verify rockchip target is recognized ==="
+          make info 2>/dev/null | grep -A2 -i rockchip | head -20 || echo "make info failed"
+          echo "=== Relevant packages ==="
+          grep -E "aic8800|cfg80211|mac80211" .config | head -20
 
       - name: Build kernel and driver (long step)
         run: |
           cd openwrt
+          echo "Starting host tools build at $(date)"
+          # Build host tools first (this is what was missing - openssl, libdeflate-gzip etc)
+          make tools/install V=s -j$(nproc) 2>&1 | tee /tmp/tools.log | tail -20
+          echo "=== tools done at $(date) ==="
+          # Build toolchain
+          make toolchain/install V=s -j$(nproc) 2>&1 | tee /tmp/toolchain.log | tail -20
+          echo "=== toolchain done at $(date) ==="
+          # Now build the driver (kernel will be built as dependency)
           echo "Starting kernel + driver build at $(date)"
-          # Compile the kernel (creates Module.symvers etc.) then the driver
-          # Use timeout to prevent GitHub 6h limit; capture full log
           timeout 300m make package/aic8800-sdio/compile V=s -j$(nproc) 2>&1 | tee /tmp/build_out.log | tail -100
           echo "Build finished at $(date)"
           # Check for built .ko files
