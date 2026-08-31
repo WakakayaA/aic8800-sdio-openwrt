@@ -92,16 +92,30 @@ jobs:
         run: |
           set -e
           mkdir -p output
-          echo "=== Looking for .ko files ==="
-          find sdk -name "*.ko" -path "*aic8800*" 2>/dev/null || true
-          find sdk -name "*.ko" | grep -i aic || true
-          echo "=== Looking for firmware files ==="
-          find sdk -iname "*firmware*" -path "*aic8800*" 2>/dev/null || true
-          echo "=== Copying .ko files ==="
-          find sdk -name "*.ko" -path "*aic8800*" -exec cp {} output/ \; 2>/dev/null || true
-          find sdk -name "*.ko" | grep -i aic | xargs -r -I{} cp {} output/ 2>/dev/null || true
+          echo "=== Copying all relevant .ko files ==="
+          # aic8800 driver modules
+          find sdk -name "aic8800*.ko" -exec cp {} output/ \; 2>/dev/null || true
+          # cfg80211 / mac80211 / compat modules (from mac80211 backports build)
+          find sdk -name "cfg80211.ko" -exec cp {} output/cfg80211.ko \; 2>/dev/null || true
+          find sdk -name "mac80211.ko" -exec cp {} output/mac80211.ko \; 2>/dev/null || true
+          find sdk -name "compat.ko" -exec cp {} output/compat.ko \; 2>/dev/null || true
+          find sdk -name "cfg80211.ko" -exec cp {} output/ \; 2>/dev/null || true
+          find sdk -name "mac80211.ko" -exec cp {} output/ \; 2>/dev/null || true
+          find sdk -name "compat.ko" -exec cp {} output/ \; 2>/dev/null || true
           echo "=== Copying firmware files ==="
           find sdk -iname "*aic8800*" -path "*firmware*" -exec cp {} output/ \; 2>/dev/null || true
+          # Try to extract firmware from apk if available
+          if command -v apk >/dev/null 2>&1; then
+            echo "apk tool available, extracting firmware package"
+            for apkfile in $(find sdk -name "*aic8800*firmware*.apk" 2>/dev/null); do
+              echo "Extracting $apkfile"
+              cd /tmp && apk extract "$apkfile" 2>/dev/null || true
+              find /tmp -name "*.fw" -o -name "*aic8800*" -type f 2>/dev/null | head -20
+              cd -
+            done
+          fi
+          echo "=== Looking for firmware blobs ==="
+          find sdk -name "*.fw" -o -name "*.bin" 2>/dev/null | grep -i aic | head -20
           echo "=== Copying built ipk/apk packages if any ==="
           find sdk/bin -name "*aic8800*" -exec cp {} output/ \; 2>/dev/null || true
           find sdk/bin -name "*cfg80211*" -exec cp {} output/ \; 2>/dev/null || true
