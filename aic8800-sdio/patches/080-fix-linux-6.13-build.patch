@@ -1,4 +1,4 @@
-From c062117922b8fcffa82a7093b4d42754aa98e92e Mon Sep 17 00:00:00 2001
+﻿From c062117922b8fcffa82a7093b4d42754aa98e92e Mon Sep 17 00:00:00 2001
 From: Mingcong Bai <jeffbai@aosc.io>
 Date: Wed, 5 Feb 2025 17:23:06 +0800
 Subject: [PATCH] rwnx: adapt to cfg80211_ops.set_monitor_channel() changes
@@ -24,7 +24,7 @@ Index: aic8800/src/PCIE/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
   * configured at firmware level.
   */
  static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +											 struct net_device *,
 +#endif
  											 struct cfg80211_chan_def *chandef)
@@ -34,7 +34,7 @@ Index: aic8800/src/PCIE/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  
  int rwnx_cfg80211_set_monitor_channel_(struct wiphy *wiphy,
                                               struct cfg80211_chan_def *chandef){
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +    return rwnx_cfg80211_set_monitor_channel(wiphy, NULL, chandef);
 +#else
      return rwnx_cfg80211_set_monitor_channel(wiphy, chandef);
@@ -46,7 +46,7 @@ Index: aic8800/src/PCIE/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  
  	if (rwnx_vif->vif_index == rwnx_hw->monitor_vif) {
  		//retrieve channel from firmware
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +		rwnx_cfg80211_set_monitor_channel(wiphy, NULL, NULL);
 +#else
  		rwnx_cfg80211_set_monitor_channel(wiphy, NULL);
@@ -62,7 +62,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aic_bsp_driver.c
  }
  
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 +MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 +#else
  MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -79,7 +79,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
   * configured at firmware level.
   */
  static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +											 struct net_device *,
 +#endif
  											 struct cfg80211_chan_def *chandef)
@@ -89,7 +89,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  
  int rwnx_cfg80211_set_monitor_channel_(struct wiphy *wiphy,
                                               struct cfg80211_chan_def *chandef){
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +    return rwnx_cfg80211_set_monitor_channel(wiphy, NULL, chandef);
 +#else
      return rwnx_cfg80211_set_monitor_channel(wiphy, chandef);
@@ -101,7 +101,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  
  	if (rwnx_vif->vif_index == rwnx_hw->monitor_vif) {
  		//retrieve channel from firmware
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 12, 0)
 +		rwnx_cfg80211_set_monitor_channel(wiphy, NULL, NULL);
 +#else
  		rwnx_cfg80211_set_monitor_channel(wiphy, NULL);
@@ -113,7 +113,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  
  
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 +MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 +#else
  MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -130,7 +130,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_platform.c
  #endif
  
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 +MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 +#else
  MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -139,3 +139,4 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_platform.c
  
  #if 0
  /**
+
