@@ -103,7 +103,20 @@ jobs:
           find sdk -name "mac80211.ko" -exec cp {} output/ \; 2>/dev/null || true
           find sdk -name "compat.ko" -exec cp {} output/ \; 2>/dev/null || true
           echo "=== Copying firmware files ==="
-          find sdk -iname "*aic8800*" -path "*firmware*" -exec cp {} output/ \; 2>/dev/null || true
+          # Copy the whole firmware pkgdir tree if present
+          FW_PKGDIR=$(find sdk -type d -path "*aic8800-sdio-firmware*" -name "aic8800_fw" 2>/dev/null | head -1)
+          if [ -n "$FW_PKGDIR" ]; then
+            echo "Found firmware pkgdir: $FW_PKGDIR"
+            mkdir -p output/firmware
+            cp -rp "$FW_PKGDIR" output/firmware/
+          fi
+          # Also try direct src firmware path
+          if [ -d sdk/build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/aic8800-sdio-5.0/src/SDIO/driver_fw/fw/aic8800D80 ]; then
+            echo "Found src firmware dir"
+            mkdir -p output/firmware/src
+            cp -rp sdk/build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/aic8800-sdio-5.0/src/SDIO/driver_fw/fw/aic8800D80 output/firmware/src/
+          fi
+          find output/firmware -type f 2>/dev/null | head -30
           # Try to extract firmware from apk if available
           if command -v apk >/dev/null 2>&1; then
             echo "apk tool available, extracting firmware package"
