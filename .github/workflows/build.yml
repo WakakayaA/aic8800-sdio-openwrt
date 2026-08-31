@@ -80,16 +80,17 @@ jobs:
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
           echo "=== mac80211 done at $(date) ==="
           echo "Starting aic8800 driver build at $(date)"
-          make package/aic8800-sdio/compile V=s -j$(nproc) 2>&1; echo "aic8800 rc=$?"
+          make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
           echo "=== aic8800 build done at $(date) ==="
           # Show tail of relevant logs
           echo "===== kernel.log tail ====="
-          tail -20 /tmp/kernel.log
+          tail -20 /tmp/kernel.log 2>/dev/null || true
           echo "===== aic8800.log tail ====="
-          tail -40 /tmp/aic8800.log
+          tail -40 /tmp/aic8800.log 2>/dev/null || true
           echo "=== Built .ko check ==="
           find . -name "aic8800*.ko" 2>/dev/null | head
           find . -name "cfg80211.ko" -o -name "mac80211.ko" -o -name "compat.ko" 2>/dev/null | head
+          true
 
       - name: Collect kernel modules and firmware
         if: always()
@@ -122,7 +123,9 @@ jobs:
           ls -la output/logs/ 2>/dev/null
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: aic8800-sdio-rockchip-lede-kernel
           path: output/*
+          if-no-files-found: warn
