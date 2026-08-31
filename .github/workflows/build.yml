@@ -28,7 +28,6 @@ jobs:
         run: |
           SDK_URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/rockchip/armv8/openwrt-sdk-${OPENWRT_VERSION}-rockchip-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
           echo "SDK URL: $SDK_URL"
-          # Retry up to 5 times with backoff, fail if HTTP != 200
           for i in 1 2 3 4 5; do
             echo "Attempt $i/5 to download SDK..."
             curl -fL --retry 3 --retry-delay 5 --connect-timeout 30 \
@@ -36,9 +35,7 @@ jobs:
             echo "Download attempt $i failed, retrying in 10s..."
             sleep 10
           done
-          # Verify file is valid zstd archive and non-trivial size
           ls -la openwrt-sdk.tar.zst
-          file openwrt-sdk.tar.zst
           test -s openwrt-sdk.tar.zst || { echo "SDK file is empty"; exit 1; }
           zstd -t openwrt-sdk.tar.zst || { echo "SDK file is corrupted"; exit 1; }
           tar --zstd -xf openwrt-sdk.tar.zst
@@ -88,13 +85,26 @@ jobs:
         run: |
           cd sdk
           make package/aic8800-sdio/compile -j$(nproc) V=s
-      - name: Collect packages
+      - name: Collect raw kernel modules and firmware
         run: |
+          set -e
           mkdir -p output
-          find sdk/bin/ -name "*aic8800*" -exec cp {} output/ \;
-          find sdk/bin/ -name "*cfg80211*" -exec cp {} output/ \;
-          find sdk/bin/ -name "*mac80211*" -exec cp {} output/ \;
-          ls -la output/
+          echo "=== Looking for .ko files ==="
+          find sdk -name "*.ko" -path "*aic8800*" 2>/dev/null || true
+          find sdk -name "*.ko" | grep -i aic || true
+          echo "=== Looking for firmware files ==="
+          find sdk -iname "*firmware*" -path "*aic8800*" 2>/dev/null || true
+          echo "=== Copying .ko files ==="
+          find sdk -name "*.ko" -path "*aic8800*" -exec cp {} output/ \; 2>/dev/null || true
+          find sdk -name "*.ko" | grep -i aic | xargs -r -I{} cp {} output/ 2>/dev/null || true
+          echo "=== Copying firmware files ==="
+          find sdk -iname "*aic8800*" -path "*firmware*" -exec cp {} output/ \; 2>/dev/null || true
+          echo "=== Copying built ipk/apk packages if any ==="
+          find sdk/bin -name "*aic8800*" -exec cp {} output/ \; 2>/dev/null || true
+          find sdk/bin -name "*cfg80211*" -exec cp {} output/ \; 2>/dev/null || true
+          find sdk/bin -name "*mac80211*" -exec cp {} output/ \; 2>/dev/null || true
+          echo "=== output content ==="
+          ls -laR output/
       - name: Store packages
         uses: actions/upload-artifact@v4
         with:
