@@ -1,10 +1,11 @@
-name: Build AIC8800 SDIO (Lede)
+name: Build AIC8800 SDIO (Kwrt 6.12.94 exact)
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build kmod-aic8800-sdio (lede rockchip/armv8)
+    name: Build kmod-aic8800-sdio (openwrt 25.12@6.12.94 + M28K exact kernel config)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,32 +26,44 @@ jobs:
             g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
             python3 python3-setuptools python3-yaml python3-pyelftools python3-pip \
             rsync swig unzip zlib1g-dev file wget zstd curl qemu-utils ccache rename \
-            libelf-dev device-tree-compiler libgmp3-dev libmpc-dev libfuse-dev dwarves
+            libelf-dev device-tree-compiler libgmp3-dev libmpc-dev libfuse-dev dwarves jq
           python3 -c "import elftools; print('pyelftools OK')" || pip3 install --break-system-packages pyelftools || pip3 install pyelftools
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Clone Lede full source (has native rockchip target with M28K)
+      - name: Clone openwrt 25.12 (kernel 6.12.94) + lede rockchip target
         run: |
-          git clone --depth 1 https://github.com/coolsnowwolf/lede.git lede
-          cd lede
-          git log --oneline -1
-          echo "=== rockchip KERNEL_PATCHVER ==="
-          grep KERNEL_PATCHVER target/linux/rockchip/Makefile
+          git clone --depth 1 https://github.com/openwrt/openwrt.git -b openwrt-25.12 openwrt
+          cd openwrt
+          # Pin kernel version to 6.12.94 (M28K runs this exact kernel)
+          echo 'LINUX_VERSION-6.12 = .94' > target/linux/generic/kernel-6.12
+          echo 'LINUX_KERNEL_HASH-6.12.94 = f143aaade8877ba5616e788b4482576db28481bcf557ef537f4fcc3938fc3176' >> target/linux/generic/kernel-6.12
+          cat target/linux/generic/kernel-6.12
+          # lede rockchip target has M28K device def
+          rm -rf package/boot target/linux/rockchip
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/coolsnowwolf/lede.git /tmp/lede_sparse
+          cd /tmp/lede_sparse
+          git sparse-checkout init --cone
+          git sparse-checkout set target/linux/rockchip package/boot
+          cp -rn ./target/linux/rockchip $GITHUB_WORKSPACE/openwrt/target/linux/rockchip
+          cp -rn ./package/boot $GITHUB_WORKSPACE/openwrt/package/boot
+          cd $GITHUB_WORKSPACE/openwrt
           echo "=== M28K in armv8.mk ==="
           grep -i "m28k" target/linux/rockchip/image/armv8.mk | head -5
+          echo "=== rockchip KERNEL_PATCHVER ==="
+          grep KERNEL_PATCHVER target/linux/rockchip/Makefile
 
       - name: Update feeds
         run: |
-          cd lede
+          cd openwrt
           echo "src-link aic8800 $GITHUB_WORKSPACE/aic8800-sdio-openwrt" >> feeds.conf.default
           cat feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Configure rockchip/armv8
+      - name: Configure rockchip/armv8 with M28K
         run: |
-          cd lede
+          cd openwrt
           echo "CONFIG_TARGET_rockchip=y" > .config
           echo "CONFIG_TARGET_rockchip_armv8=y" >> .config
           echo "CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_widora_mangopi-m28k=y" >> .config
@@ -60,36 +73,50 @@ jobs:
           echo "CONFIG_PACKAGE_kmod-mac80211=m" >> .config
           make defconfig
           echo "=== TARGET config (diagnostic) ==="
-          grep -E "^CONFIG_TARGET" .config | head -20
-          echo "=== Verify rockchip target ==="
-          make info 2>/dev/null | grep -i "rockchip" | head -10 || echo "make info failed"
+          grep -E "^CONFIG_TARGET" .config | head -10
 
-      - name: Build kernel and driver (long step)
+      - name: Build kernel and mac80211
         run: |
-          cd lede
-          echo "Starting host tools build at $(date)"
+          cd openwrt
+          echo "Starting tools build at $(date)"
           make tools/install V=s -j$(nproc) > /tmp/tools.log 2>&1; echo "tools rc=$?"
-          echo "=== tools done at $(date) ==="
           echo "Starting toolchain build at $(date)"
           make toolchain/install V=s -j$(nproc) > /tmp/toolchain.log 2>&1; echo "toolchain rc=$?"
-          echo "=== toolchain done at $(date) ==="
           echo "Starting kernel build at $(date)"
           make target/linux/compile V=s -j$(nproc) > /tmp/kernel.log 2>&1; echo "kernel rc=$?"
-          echo "=== kernel done at $(date) ==="
-          echo "Building mac80211 deps at $(date)"
+          echo "Building mac80211 at $(date)"
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
-          echo "=== mac80211 done at $(date) ==="
-          echo "Starting aic8800 driver build at $(date)"
+
+      - name: Rebuild kernel with M28K exact config, then build aic8800
+        run: |
+          cd openwrt
+          # CRITICAL: Overlay the exact M28K kernel .config (this_module=1088)
+          KDIR=$(find build_dir -maxdepth 4 -type d -name "linux-6.12.94" | head -1)
+          echo "KDIR=$KDIR"
+          if [ -z "$KDIR" ]; then
+            echo "ERROR: kernel build dir not found"; find build_dir -maxdepth 5 -type d -name "linux-6.12*"; exit 1
+          fi
+          cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k_kernel_config.txt "$KDIR/.config"
+          echo "=== applied M28K config to $KDIR/.config ==="
+          # Verify this_module-relevant options present
+          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_MODULE_DEBUG|^CONFIG_KALLSYMS" "$KDIR/.config" | head
+          # Rebuild kernel with new config (regenerate Module.symvers, headers)
+          make target/linux/compile V=s -j$(nproc) > /tmp/kernel_rebuild.log 2>&1; echo "kernel rebuild rc=$?"
+
+          echo "Building aic8800 driver at $(date)"
           make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
-          echo "=== aic8800 build done at $(date) ==="
-          # Show tail of relevant logs
-          echo "===== kernel.log tail ====="
-          tail -20 /tmp/kernel.log 2>/dev/null || true
+
           echo "===== aic8800.log tail ====="
           tail -40 /tmp/aic8800.log 2>/dev/null || true
           echo "=== Built .ko check ==="
           find . -name "aic8800*.ko" 2>/dev/null | head
           find . -name "cfg80211.ko" -o -name "mac80211.ko" -o -name "compat.ko" 2>/dev/null | head
+          echo "=== this_module size check (target should be 1088) ==="
+          for ko in $(find . -name "aic8800*.ko" 2>/dev/null | head -2); do
+            echo "checking $ko"
+            # use readelf if available else modinfo
+            readelf -SW "$ko" 2>/dev/null | grep this_module || true
+          done
           true
 
       - name: Collect kernel modules and firmware
@@ -97,27 +124,23 @@ jobs:
         run: |
           set -e
           mkdir -p output
-          echo "=== Finding .ko files ==="
-          find lede -name "aic8800*.ko" -exec cp {} output/ \; 2>/dev/null || true
-          find lede -name "cfg80211.ko" -exec cp {} output/cfg80211.ko \; 2>/dev/null || true
-          find lede -name "mac80211.ko" -exec cp {} output/mac80211.ko \; 2>/dev/null || true
-          find lede -name "compat.ko" -exec cp {} output/compat.ko \; 2>/dev/null || true
+          echo "=== Finding aic8800 .ko files ==="
+          find openwrt -name "aic8800*.ko" -exec cp {} output/ \; 2>/dev/null || true
           echo "=== Firmware ==="
-          FW_SRC=$(find lede -type d -path "*driver_fw/fw/aic8800D80*" 2>/dev/null | head -1)
+          FW_SRC=$(find openwrt -type d -path "*driver_fw/fw/aic8800D80*" 2>/dev/null | head -1)
           echo "FW_SRC=$FW_SRC"
           if [ -n "$FW_SRC" ]; then
             mkdir -p output/firmware
             cp -rp "$FW_SRC" output/firmware/
           fi
-          echo "=== .ko files ==="
-          find output -name "*.ko" -exec ls -la {} \;
+          # Also copy prebuilt mac80211/cfg80211/compat from ImageBuilder - upload separately
           echo "=== Output tree ==="
           find output -type f | head -40
-          # Save build logs for debugging
           mkdir -p output/logs
           cp /tmp/tools.log output/logs/ 2>/dev/null || true
           cp /tmp/toolchain.log output/logs/ 2>/dev/null || true
           cp /tmp/kernel.log output/logs/ 2>/dev/null || true
+          cp /tmp/kernel_rebuild.log output/logs/ 2>/dev/null || true
           cp /tmp/mac80211.log output/logs/ 2>/dev/null || true
           cp /tmp/aic8800.log output/logs/ 2>/dev/null || true
           ls -la output/logs/ 2>/dev/null
@@ -126,6 +149,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: aic8800-sdio-rockchip-lede-kernel
+          name: aic8800-sdio-rockchip-kwrt-kernel
           path: output/*
           if-no-files-found: warn
