@@ -33,12 +33,13 @@ jobs:
 
       - name: Clone openwrt 25.12 @ 6.12.94 era + add M28K device
         run: |
-          # CRITICAL: checkout openwrt-25.12 at commit 6bad5f2050 (kernel bumped to 6.12.94 on 2026-06-19).
+          # CRITICAL: checkout openwrt at commit 6bad5f2050 (kernel bumped to 6.12.94 on 2026-06-19).
           # At this commit ALL patches (generic + rockchip) are written for 6.12.94, so no conflicts.
           # Latest openwrt-25.12 is 6.12.103 whose patches conflict with pinned 6.12.94.
-          git clone --depth 1 --branch openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
+          # Use partial clone of openwrt-25.12 branch (blob:none) so historical commit
+          # 6bad5f2050 (verified on openwrt-25.12 branch, 181 commits behind tip) can be checked out.
+          git clone --filter=blob:none --no-checkout --branch openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
           cd openwrt
-          git fetch --depth 1 origin 6bad5f2050
           git checkout 6bad5f2050
           grep LINUX_VERSION-6.12 target/linux/generic/kernel-6.12
           grep LINUX_KERNEL_HASH-6.12.94 target/linux/generic/kernel-6.12
