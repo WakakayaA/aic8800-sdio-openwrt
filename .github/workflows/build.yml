@@ -31,7 +31,7 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Clone openwrt 25.12 (kernel 6.12.94) + lede rockchip target
+      - name: Clone openwrt 25.12 (kernel 6.12.94) + add M28K device
         run: |
           git clone --depth 1 https://github.com/openwrt/openwrt.git -b openwrt-25.12 openwrt
           cd openwrt
@@ -41,23 +41,47 @@ jobs:
           echo 'LINUX_KERNEL_HASH-6.12.94 = e998a232b9418db3301cb58468e291a4f41d6ab8306029b30d991f56251dc8d2' >> target/linux/generic/kernel-6.12
           cat target/linux/generic/kernel-6.12
           # CRITICAL: openwrt-25.12 branch patches are written for 6.12.103.
-          # Pinning to 6.12.94 causes patch conflicts (e.g. mtk_eth_soc 738-01).
-          # Remove generic pending/hack patches (non-essential; M28K is rockchip, doesn't need
-          # mtk/netfilter/etc generic tweaks). Keep rockchip platform patches only.
+          # Pinning to 6.12.94 causes patch conflicts. Remove generic pending/hack patches
+          # (non-essential for rockchip M28K; keeps mtk_eth_soc etc from conflicting).
           rm -f target/linux/generic/pending-6.12/*.patch
           rm -f target/linux/generic/hack-6.12/*.patch
           echo "=== remaining generic patches ==="
           ls target/linux/generic/pending-6.12/ 2>/dev/null | head
           ls target/linux/generic/hack-6.12/ 2>/dev/null | head
-          # lede rockchip target has M28K device def
-          rm -rf package/boot target/linux/rockchip
-          git clone --depth 1 --filter=blob:none --sparse https://github.com/coolsnowwolf/lede.git /tmp/lede_sparse
-          cd /tmp/lede_sparse
-          git sparse-checkout init --cone
-          git sparse-checkout set target/linux/rockchip package/boot
-          cp -rn ./target/linux/rockchip $GITHUB_WORKSPACE/openwrt/target/linux/rockchip
-          cp -rn ./package/boot $GITHUB_WORKSPACE/openwrt/package/boot
-          cd $GITHUB_WORKSPACE/openwrt
+          # USE OPENWRT OFFICIAL rockchip target (don't copy lede's - it's incompatible and
+          # caused fallback to mediatek). Just append the M28K device definition.
+          # M28K = RK3528 SoC, armv8 subtarget (already supported by openwrt-25.12 rockchip)
+          cat >> target/linux/rockchip/image/armv8.mk <<'EOF'
+
+define Device/widora_mangopi-m28
+  DEVICE_VENDOR := Widora
+  SOC := rk3528
+  UBOOT_DEVICE_NAME := generic-rk3528
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
+  DEVICE_PACKAGES := kmod-aic8800-sdio wpad-openssl -urngd
+endef
+
+define Device/widora_mangopi-m28c
+$(call Device/widora_mangopi-m28)
+  DEVICE_MODEL := MangoPi M28C
+  DEVICE_PACKAGES += kmod-usb-serial-option
+endef
+TARGET_DEVICES += widora_mangopi-m28c
+
+define Device/widora_mangopi-m28k
+$(call Device/widora_mangopi-m28)
+  DEVICE_MODEL := MangoPi M28K
+  DEVICE_PACKAGES += kmod-r8168
+endef
+TARGET_DEVICES += widora_mangopi-m28k
+
+define Device/widora_mangopi-m28k-pro
+$(call Device/widora_mangopi-m28)
+  DEVICE_MODEL := MangoPi M28K Pro
+  DEVICE_PACKAGES += kmod-i2c-gpio kmod-r8125
+endef
+TARGET_DEVICES += widora_mangopi-m28k-pro
+EOF
           echo "=== M28K in armv8.mk ==="
           grep -i "m28k" target/linux/rockchip/image/armv8.mk | head -5
           echo "=== rockchip KERNEL_PATCHVER ==="
