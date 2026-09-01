@@ -1,0 +1,35 @@
+From: Fix P2P_DEVICE in interface_combinations for newer kernels
+Subject: [PATCH] aic8800: remove P2P_DEVICE from interface_combinations
+
+In newer kernels (5.10+), NL80211_IFTYPE_P2P_DEVICE is classified as
+a software interface type (wiphy->software_iftypes), and must NOT be
+listed in interface_combinations. The wiphy_verify_combinations()
+function checks for this and returns -EINVAL if software iftypes are
+found, causing wiphy_register() to fail.
+
+This driver was written for older kernels where P2P_DEVICE was not
+yet a software iftype. Remove the P2P_DEVICE entry from rwnx_limits
+to fix wiphy_register failure on newer kernels.
+
+Signed-off-by: Fix
+---
+ src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
+index 1234567..abcdefg 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
+@@ -XXX,XX +XXX,XX @@ static struct ieee80211_iface_limit rwnx_limits[] = {
+ #else
+ { .max = 1,
+ #endif
+ .types = BIT(NL80211_IFTYPE_P2P_CLIENT) | BIT(NL80211_IFTYPE_P2P_GO)},
+-#ifndef CONFIG_USE_P2P0
+-{ .max = 1,
+-.types = BIT(NL80211_IFTYPE_P2P_DEVICE),
+-}
+-#endif
+ };
+ 
+ static struct ieee80211_iface_limit rwnx_limits_dfs[] = {
