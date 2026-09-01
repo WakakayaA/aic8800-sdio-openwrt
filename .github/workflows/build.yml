@@ -105,8 +105,10 @@ jobs:
           make toolchain/install V=s -j$(nproc) > /tmp/toolchain.log 2>&1; echo "toolchain rc=$?"
           echo "Starting kernel build at $(date)"
           make target/linux/compile V=s -j$(nproc) > /tmp/kernel.log 2>&1; echo "kernel rc=$?"
-          echo "Building mac80211 at $(date)"
-          make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
+          # NOTE: mac80211 is built LATER in Verify step, AFTER M28K kernel config override.
+          # Building it here with default OpenWrt config causes cfg80211.ko to reference
+          # module namespace symbols that M28K kernel (CONFIG_MODULE_ALLOW_MISSING_NAMESPACE_IMPORTS=n)
+          # does not support -> "class 'ieee80211' does not have namespace" load failure.
 
       - name: Verify kernel config + build aic8800
         run: |
@@ -158,6 +160,12 @@ jobs:
           echo "=== Module.symvers exists? ==="
           ls -la Module.symvers 2>/dev/null || true
           cd -
+
+          # Build mac80211 AFTER M28K config override, so cfg80211/mac80211/compat
+          # are compiled with M28K exact kernel config (no module namespace symbols
+          # that M28K kernel CONFIG_MODULE_ALLOW_MISSING_NAMESPACE_IMPORTS=n rejects).
+          echo "Building mac80211 with M28K config at $(date)"
+          make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
 
           echo "Building aic8800 driver at $(date)"
           make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
