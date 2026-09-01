@@ -113,16 +113,44 @@ jobs:
           cd openwrt
           KDIR=$(find build_dir -maxdepth 4 -type d -name "linux-6.12.94" | head -1)
           echo "KDIR=$KDIR"
-          echo "=== Verify M28K config in kernel .config (this_module should be 1088) ==="
-          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_TRIM_UNUSED_KSYMS|^CONFIG_MODULE_DEBUG" "$KDIR/.config" | head
+          echo "=== Default kernel .config (before M28K override) ==="
+          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_BPF_SYSCALL|^CONFIG_PERF_EVENTS|^CONFIG_TRIM_UNUSED_KSYMS" "$KDIR/.config" | head
           echo "=== Kernel version ==="
-          grep -E "6\.12\." "$KDIR/include/generated/utsrelease.h" 2>/dev/null || cat "$KDIR/include/config/kernel.release" 2>/dev/null || true
-          # Force regenerate headers and Module.symvers with M28K config
+          cat "$KDIR/include/config/kernel.release" 2>/dev/null || true
+
+          # CRITICAL: Override kernel .config with M28K exact config DIRECTLY.
+          # Do NOT use 'make target/linux/compile' again — it runs kconfig.pl which
+          # regenerates .config from generic/config-6.12 + rockchip/config-6.12 +
+          # rockchip/armv8/config-6.12, overwriting the M28K config (this_module stays 704).
+          # Instead: copy M28K .config, then run 'make olddefconfig' + 'make prepare'
+          # directly in the kernel source dir to regenerate headers with M28K config.
+          cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k_kernel_config.txt "$KDIR/.config"
+          echo "=== M28K config copied, checking key options ==="
+          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_BPF_SYSCALL|^CONFIG_PERF_EVENTS|^CONFIG_TRIM_UNUSED_KSYMS" "$KDIR/.config" | head
+
+          # Force regenerate all headers and Module.symvers with M28K config
           rm -rf "$KDIR/include/generated"
           rm -f "$KDIR/Module.symvers"
-          make target/linux/compile V=s -j$(nproc) > /tmp/kernel_rebuild.log 2>&1; echo "kernel rebuild rc=$?"
-          echo "=== Rebuilt kernel version check ==="
-          cat "$KDIR/include/config/kernel.release" 2>/dev/null || true
+
+          # Regenerate kernel headers directly (bypasses OpenWrt kconfig.pl)
+          TC_DIR=$(ls -d $PWD/staging_dir/toolchain-aarch64_generic_*_musl 2>/dev/null | head -1)
+          echo "TC_DIR=$TC_DIR"
+          export STAGING_DIR=$TC_DIR
+          export PATH=$TC_DIR/bin:$PATH
+          cd "$KDIR"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-openwrt-linux-musl- olddefconfig > /tmp/kernel_olddefconfig.log 2>&1
+          echo "olddefconfig rc=$?"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-openwrt-linux-musl- prepare scripts > /tmp/kernel_prepare.log 2>&1
+          echo "prepare rc=$?"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-openwrt-linux-musl- modules_prepare > /tmp/kernel_modules_prepare.log 2>&1
+          echo "modules_prepare rc=$?"
+          echo "=== Regenerated kernel version ==="
+          cat include/config/kernel.release 2>/dev/null || true
+          echo "=== Regenerated utsrelease ==="
+          cat include/generated/utsrelease.h 2>/dev/null || true
+          echo "=== Module.symvers exists? ==="
+          ls -la Module.symvers 2>/dev/null || true
+          cd -
 
           echo "Building aic8800 driver at $(date)"
           make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
@@ -131,7 +159,6 @@ jobs:
           tail -40 /tmp/aic8800.log 2>/dev/null || true
           echo "=== Built .ko check ==="
           find . -name "aic8800*.ko" 2>/dev/null | head
-          find . -name "cfg80211.ko" -o -name "mac80211.ko" -o -name "compat.ko" 2>/dev/null | head
           echo "=== this_module size check (target should be 1088) ==="
           for ko in $(find . -name "aic8800*.ko" 2>/dev/null | head -2); do
             echo "checking $ko"
