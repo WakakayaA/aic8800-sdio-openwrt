@@ -175,7 +175,7 @@ jobs:
             # Add forward declaration if not present
             grep -q "^struct module;" "$CLASS_H" || sed -i 's/^struct device;/struct module;\nstruct device;/' "$CLASS_H"
             # Add owner field after name field in struct class
-            sed -i '/^const char[[:space:]]*\*name;/a\\tstruct module\t\t*owner;' "$CLASS_H"
+            sed -i '/^[[:space:]]*const char[[:space:]]*\*name;/a\\tstruct module\t\t*owner;' "$CLASS_H"
             echo "Patched. Verifying:"
             grep -A3 "struct class {" "$CLASS_H" | head -6
             grep "struct module.*owner" "$CLASS_H" || echo "WARNING: owner field not found after patch!"
