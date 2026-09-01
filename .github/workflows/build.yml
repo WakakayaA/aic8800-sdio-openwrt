@@ -133,9 +133,11 @@ jobs:
           echo "=== M28K config copied, checking key options ==="
           grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_BPF_SYSCALL|^CONFIG_PERF_EVENTS|^CONFIG_TRIM_UNUSED_KSYMS" "$KDIR/.config" | head
 
-          # Force regenerate all headers and Module.symvers with M28K config
+          # Force regenerate headers with M28K config.
+          # Do NOT delete Module.symvers — it's needed by modpost for dependency
+          # packages (gpio-button-hotplug etc). M28K has CONFIG_MODVERSIONS=n so
+          # the old CRCs are not checked at load time; modpost only needs symbol names.
           rm -rf "$KDIR/include/generated"
-          rm -f "$KDIR/Module.symvers"
 
           # Regenerate kernel headers directly (bypasses OpenWrt kconfig.pl)
           TC_DIR=$(ls -d $PWD/staging_dir/toolchain-aarch64_generic_*_musl 2>/dev/null | head -1)
