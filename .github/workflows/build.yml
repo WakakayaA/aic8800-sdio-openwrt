@@ -42,38 +42,8 @@ jobs:
           git checkout 6bad5f2050
           grep LINUX_VERSION-6.12 target/linux/generic/kernel-6.12
           grep LINUX_KERNEL_HASH-6.12.94 target/linux/generic/kernel-6.12
-          # Append M28K device definition to official rockchip target (RK3528 supported here)
-          cat >> target/linux/rockchip/image/armv8.mk <<'EOF'
-
-define Device/widora_mangopi-m28
-  DEVICE_VENDOR := Widora
-  SOC := rk3528
-  UBOOT_DEVICE_NAME := generic-rk3528
-  IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
-  DEVICE_PACKAGES := kmod-aic8800-sdio wpad-openssl -urngd
-endef
-
-define Device/widora_mangopi-m28c
-$(call Device/widora_mangopi-m28)
-  DEVICE_MODEL := MangoPi M28C
-  DEVICE_PACKAGES += kmod-usb-serial-option
-endef
-TARGET_DEVICES += widora_mangopi-m28c
-
-define Device/widora_mangopi-m28k
-$(call Device/widora_mangopi-m28)
-  DEVICE_MODEL := MangoPi M28K
-  DEVICE_PACKAGES += kmod-r8168
-endef
-TARGET_DEVICES += widora_mangopi-m28k
-
-define Device/widora_mangopi-m28k-pro
-$(call Device/widora_mangopi-m28)
-  DEVICE_MODEL := MangoPi M28K Pro
-  DEVICE_PACKAGES += kmod-i2c-gpio kmod-r8125
-endef
-TARGET_DEVICES += widora_mangopi-m28k-pro
-EOF
+          # Append M28K device definition from repo file (avoid YAML/heredoc conflict)
+          cat $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k-devices.mk >> target/linux/rockchip/image/armv8.mk
           # Copy M28K board DTS files from repo into kernel tree
           KDT=target/linux/rockchip/files/arch/arm64/boot/dts/rockchip
           mkdir -p $KDT
