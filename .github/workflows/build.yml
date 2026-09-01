@@ -111,8 +111,13 @@ jobs:
       - name: Verify kernel config + build aic8800
         run: |
           cd openwrt
-          KDIR=$(find build_dir -maxdepth 4 -type d -name "linux-6.12.94" | head -1)
+          # CRITICAL: must use TARGET kernel dir, NOT toolchain kernel dir.
+          # find build_dir -maxdepth 4 returns BOTH toolchain/.../linux-6.12.94 (headers only)
+          # and target/.../linux-rockchip_armv8/linux-6.12.94 (real kernel source used by module build).
+          # head -1 picks the toolchain one, so M28K config gets applied to wrong dir -> this_module stays 704.
+          KDIR=build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/linux-6.12.94
           echo "KDIR=$KDIR"
+          ls -la "$KDIR/.config" 2>/dev/null || echo "KDIR .config not found!"
           echo "=== Default kernel .config (before M28K override) ==="
           grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_BPF_SYSCALL|^CONFIG_PERF_EVENTS|^CONFIG_TRIM_UNUSED_KSYMS" "$KDIR/.config" | head
           echo "=== Kernel version ==="
