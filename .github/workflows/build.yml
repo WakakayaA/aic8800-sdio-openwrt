@@ -85,9 +85,16 @@ jobs:
           echo "CONFIG_PACKAGE_aic8800-sdio-firmware=m" >> .config
           echo "CONFIG_PACKAGE_kmod-cfg80211=m" >> .config
           echo "CONFIG_PACKAGE_kmod-mac80211=m" >> .config
+          # CRITICAL: Append M28K exact kernel config to rockchip config-6.12
+          # so OpenWrt's kconfig.pl merges it into the kernel .config (this_module=1088).
+          # Manual cp to $KDIR/.config gets overwritten by make target/linux/compile.
+          cat $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k_kernel_config.txt >> target/linux/rockchip/config-6.12
+          echo "=== M28K config appended, lines: $(wc -l < target/linux/rockchip/config-6.12) ==="
           make defconfig
           echo "=== TARGET config (diagnostic) ==="
           grep -E "^CONFIG_TARGET" .config | head -10
+          echo "=== this_module-relevant options in final .config ==="
+          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_TRIM_UNUSED_KSYMS" .config | head
 
       - name: Build kernel and mac80211
         run: |
@@ -101,21 +108,21 @@ jobs:
           echo "Building mac80211 at $(date)"
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
 
-      - name: Rebuild kernel with M28K exact config, then build aic8800
+      - name: Verify kernel config + build aic8800
         run: |
           cd openwrt
-          # CRITICAL: Overlay the exact M28K kernel .config (this_module=1088)
           KDIR=$(find build_dir -maxdepth 4 -type d -name "linux-6.12.94" | head -1)
           echo "KDIR=$KDIR"
-          if [ -z "$KDIR" ]; then
-            echo "ERROR: kernel build dir not found"; find build_dir -maxdepth 5 -type d -name "linux-6.12*"; exit 1
-          fi
-          cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k_kernel_config.txt "$KDIR/.config"
-          echo "=== applied M28K config to $KDIR/.config ==="
-          # Verify this_module-relevant options present
-          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_MODULE_DEBUG|^CONFIG_KALLSYMS" "$KDIR/.config" | head
-          # Rebuild kernel with new config (regenerate Module.symvers, headers)
+          echo "=== Verify M28K config in kernel .config (this_module should be 1088) ==="
+          grep -E "^CONFIG_MODULE_UNLOAD|^CONFIG_KALLSYMS|^CONFIG_TRIM_UNUSED_KSYMS|^CONFIG_MODULE_DEBUG" "$KDIR/.config" | head
+          echo "=== Kernel version ==="
+          grep -E "6\.12\." "$KDIR/include/generated/utsrelease.h" 2>/dev/null || cat "$KDIR/include/config/kernel.release" 2>/dev/null || true
+          # Force regenerate headers and Module.symvers with M28K config
+          rm -rf "$KDIR/include/generated"
+          rm -f "$KDIR/Module.symvers"
           make target/linux/compile V=s -j$(nproc) > /tmp/kernel_rebuild.log 2>&1; echo "kernel rebuild rc=$?"
+          echo "=== Rebuilt kernel version check ==="
+          cat "$KDIR/include/config/kernel.release" 2>/dev/null || true
 
           echo "Building aic8800 driver at $(date)"
           make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
@@ -128,8 +135,8 @@ jobs:
           echo "=== this_module size check (target should be 1088) ==="
           for ko in $(find . -name "aic8800*.ko" 2>/dev/null | head -2); do
             echo "checking $ko"
-            # use readelf if available else modinfo
             readelf -SW "$ko" 2>/dev/null | grep this_module || true
+            modinfo "$ko" 2>/dev/null | grep -E "vermagic|filename" || true
           done
           true
 
