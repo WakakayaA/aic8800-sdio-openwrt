@@ -181,6 +181,12 @@ jobs:
           mkdir -p output
           echo "=== Finding aic8800 .ko files ==="
           find openwrt -name "aic8800*.ko" -exec cp {} output/ \; 2>/dev/null || true
+          echo "=== Finding mac80211/cfg80211/compat .ko (matching build) ==="
+          find openwrt -path "*/mac80211-regular/*" -name "cfg80211.ko" -exec cp {} output/ \; 2>/dev/null || true
+          find openwrt -path "*/mac80211-regular/*" -name "mac80211.ko" -exec cp {} output/ \; 2>/dev/null || true
+          find openwrt -path "*/mac80211-regular/*" -name "compat.ko" -exec cp {} output/ \; 2>/dev/null || true
+          echo "=== All .ko in output ==="
+          ls -la output/*.ko 2>/dev/null || true
           echo "=== Firmware ==="
           FW_SRC=$(find openwrt -type d -path "*driver_fw/fw/aic8800D80*" 2>/dev/null | head -1)
           echo "FW_SRC=$FW_SRC"
