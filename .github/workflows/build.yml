@@ -193,8 +193,12 @@ jobs:
           # but still advertises iftype_data with HE capabilities. Newer kernels (6.x)
           # validate that iftype_data he_cap.has_he must be true, causing wiphy_register()
           # to fail with -EINVAL at core.c:970. AIC8800D80 is Wi-Fi 6, so set has_he=true.
+          # CRITICAL: must prepare package first to extract source to build_dir,
+          # otherwise find won't locate rwnx_main.c and sed patch silently fails.
+          echo "Preparing aic8800-sdio package (extract source)..."
+          make package/aic8800-sdio/prepare V=s > /tmp/aic8800_prepare.log 2>&1; echo "aic8800 prepare rc=$?"
           echo "=== Patching rwnx_main.c has_he false -> true ==="
-          RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" -path "*aic8800*" 2>/dev/null | head -1)
+          RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" -path "*aic8800*SDIO*" 2>/dev/null | head -1)
           echo "RWNX_MAIN=$RWNX_MAIN"
           if [ -n "$RWNX_MAIN" ]; then
             grep -n "has_he" "$RWNX_MAIN" | head -5
