@@ -161,6 +161,26 @@ jobs:
           ls -la Module.symvers 2>/dev/null || true
           cd -
 
+          # CRITICAL ABI FIX: Kwrt kernel (M28K) has struct class with 'owner' field
+          # (104 bytes, 13 fields, ns_type at +0x48). openwrt official 6.12.94 removed
+          # the owner field (96 bytes, 12 fields, ns_type at +0x40). This ABI mismatch
+          # causes cfg80211.ko to fail loading with "class 'ieee80211' does not have namespace"
+          # because the kernel reads ns_type/namespace at wrong offsets.
+          # Patch the kernel header to add owner field back, matching Kwrt's struct class layout.
+          echo "=== Patching struct class to add owner field (Kwrt ABI match) ==="
+          CLASS_H="$KDIR/include/linux/device/class.h"
+          if grep -q "struct module.*owner" "$CLASS_H"; then
+            echo "owner field already present, skipping"
+          else
+            # Add forward declaration if not present
+            grep -q "^struct module;" "$CLASS_H" || sed -i 's/^struct device;/struct module;\nstruct device;/' "$CLASS_H"
+            # Add owner field after name field in struct class
+            sed -i '/^const char[[:space:]]*\*name;/a\\tstruct module\t\t*owner;' "$CLASS_H"
+            echo "Patched. Verifying:"
+            grep -A2 "struct class {" "$CLASS_H" | head -5
+            grep "struct module.*owner" "$CLASS_H" || echo "WARNING: owner field not found after patch!"
+          fi
+
           # Build mac80211 AFTER M28K config override, so cfg80211/mac80211/compat
           # are compiled with M28K exact kernel config (no module namespace symbols
           # that M28K kernel CONFIG_MODULE_ALLOW_MISSING_NAMESPACE_IMPORTS=n rejects).
