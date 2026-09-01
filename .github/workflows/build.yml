@@ -31,26 +31,18 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Clone openwrt 25.12 (kernel 6.12.94) + add M28K device
+      - name: Clone openwrt 25.12 @ 6.12.94 era + add M28K device
         run: |
-          git clone --depth 1 https://github.com/openwrt/openwrt.git -b openwrt-25.12 openwrt
+          # CRITICAL: checkout openwrt-25.12 at commit 6bad5f2050 (kernel bumped to 6.12.94 on 2026-06-19).
+          # At this commit ALL patches (generic + rockchip) are written for 6.12.94, so no conflicts.
+          # Latest openwrt-25.12 is 6.12.103 whose patches conflict with pinned 6.12.94.
+          git clone --depth 1 --branch openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
           cd openwrt
-          # Pin kernel version to 6.12.94 (M28K runs this exact kernel)
-          # NOTE: hash must match the actual downloaded linux-6.12.94.tar.xz (e998a232...)
-          echo 'LINUX_VERSION-6.12 = .94' > target/linux/generic/kernel-6.12
-          echo 'LINUX_KERNEL_HASH-6.12.94 = e998a232b9418db3301cb58468e291a4f41d6ab8306029b30d991f56251dc8d2' >> target/linux/generic/kernel-6.12
-          cat target/linux/generic/kernel-6.12
-          # CRITICAL: openwrt-25.12 branch patches are written for 6.12.103.
-          # Pinning to 6.12.94 causes patch conflicts. Remove generic pending/hack patches
-          # (non-essential for rockchip M28K; keeps mtk_eth_soc etc from conflicting).
-          rm -f target/linux/generic/pending-6.12/*.patch
-          rm -f target/linux/generic/hack-6.12/*.patch
-          echo "=== remaining generic patches ==="
-          ls target/linux/generic/pending-6.12/ 2>/dev/null | head
-          ls target/linux/generic/hack-6.12/ 2>/dev/null | head
-          # USE OPENWRT OFFICIAL rockchip target (don't copy lede's - it's incompatible and
-          # caused fallback to mediatek). Just append the M28K device definition.
-          # M28K = RK3528 SoC, armv8 subtarget (already supported by openwrt-25.12 rockchip)
+          git fetch --depth 1 origin 6bad5f2050
+          git checkout 6bad5f2050
+          grep LINUX_VERSION-6.12 target/linux/generic/kernel-6.12
+          grep LINUX_KERNEL_HASH-6.12.94 target/linux/generic/kernel-6.12
+          # Append M28K device definition to official rockchip target (RK3528 supported here)
           cat >> target/linux/rockchip/image/armv8.mk <<'EOF'
 
 define Device/widora_mangopi-m28
@@ -82,6 +74,11 @@ $(call Device/widora_mangopi-m28)
 endef
 TARGET_DEVICES += widora_mangopi-m28k-pro
 EOF
+          # Copy M28K board DTS files from repo into kernel tree
+          KDT=target/linux/rockchip/files/arch/arm64/boot/dts/rockchip
+          mkdir -p $KDT
+          cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k-dts/*.dts* $KDT/
+          ls $KDT/ | grep m28
           echo "=== M28K in armv8.mk ==="
           grep -i "m28k" target/linux/rockchip/image/armv8.mk | head -5
           echo "=== rockchip KERNEL_PATCHVER ==="
