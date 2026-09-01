@@ -1,4 +1,4 @@
-name: Build AIC8800 SDIO (Kwrt 6.12.94 exact)
+name: Build AIC8800 SDIO Kwrt 6.12.94
 
 on:
   workflow_dispatch:
