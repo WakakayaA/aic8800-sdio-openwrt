@@ -177,14 +177,16 @@ jobs:
             # Add owner field after name field in struct class
             sed -i '/^const char[[:space:]]*\*name;/a\\tstruct module\t\t*owner;' "$CLASS_H"
             echo "Patched. Verifying:"
-            grep -A2 "struct class {" "$CLASS_H" | head -5
+            grep -A3 "struct class {" "$CLASS_H" | head -6
             grep "struct module.*owner" "$CLASS_H" || echo "WARNING: owner field not found after patch!"
           fi
 
-          # Build mac80211 AFTER M28K config override, so cfg80211/mac80211/compat
-          # are compiled with M28K exact kernel config (no module namespace symbols
-          # that M28K kernel CONFIG_MODULE_ALLOW_MISSING_NAMESPACE_IMPORTS=n rejects).
-          echo "Building mac80211 with M28K config at $(date)"
+          # CRITICAL: clean mac80211 to force recompile with patched class.h
+          echo "Cleaning mac80211 to force recompile with patched class.h"
+          make package/mac80211/clean V=s > /tmp/mac80211_clean.log 2>&1; echo "mac80211 clean rc=$?"
+
+          # Build mac80211 AFTER M28K config override AND class.h owner patch
+          echo "Building mac80211 with M28K config + class.h owner patch at $(date)"
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
 
           echo "Building aic8800 driver at $(date)"
