@@ -57,7 +57,7 @@ index 5f1e91e..b757b7e 100644
 @@ -3854,7 +3862,11 @@ static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
- #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
+ #if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 +#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
   unsigned int link_id,
 +#else
@@ -149,7 +149,7 @@ index 0b4455a..f330e38 100644
 @@ -3772,7 +3780,11 @@ static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
- #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
+ #if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 +#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
   unsigned int link_id,
 +#else
@@ -193,7 +193,7 @@ index 06d6096..804dc2d 100644
 @@ -4514,7 +4514,11 @@ static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
- #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
+ #if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 +#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
   unsigned int link_id,
 +#else
