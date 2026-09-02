@@ -198,7 +198,12 @@ jobs:
           echo "Preparing aic8800-sdio package (extract source)..."
           make package/aic8800-sdio/prepare V=s > /tmp/aic8800_prepare.log 2>&1; echo "aic8800 prepare rc=$?"
           echo "=== Patching rwnx_main.c has_he false -> true ==="
-          RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" -path "*aic8800*SDIO*" 2>/dev/null | head -1)
+          echo "Searching for rwnx_main.c in build_dir..."
+          find openwrt/build_dir -name "rwnx_main.c" 2>/dev/null | head -10
+          RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" -path "*SDIO*" 2>/dev/null | head -1)
+          if [ -z "$RWNX_MAIN" ]; then
+            RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" 2>/dev/null | head -1)
+          fi
           echo "RWNX_MAIN=$RWNX_MAIN"
           if [ -n "$RWNX_MAIN" ]; then
             grep -n "has_he" "$RWNX_MAIN" | head -5
