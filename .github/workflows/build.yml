@@ -196,23 +196,34 @@ jobs:
           # the kernel headers, its priv (rwnx_hw) lands at wiphy+0x520 which
           # cfg80211.ko reads as n_radios -> wiphy_register walks the multi-radio
           # path and fails wiphy_verify_iface_combinations (core.c:642).
-          echo "Installing mac80211 headers (InstallDev) at $(date)"
-          make package/mac80211/install V=s > /tmp/mac80211_install.log 2>&1; echo "mac80211 install rc=$?"
-          # ALSO copy headers directly from backports source tree (belt & braces)
+          # NOTE: make package/mac80211/install (InstallDev) FAILS here (exit 2, unknown
+          # cause); we manually install backports headers instead (full InstallDev equiv).
           BACKPORT_SRC=$(find build_dir -path "*/mac80211-regular/backports-6.18.26" -type d 2>/dev/null | head -1)
           echo "BACKPORT_SRC=$BACKPORT_SRC"
-          if [ -n "$BACKPORT_SRC" ]; then
-            STG_BP=$(ls -d staging_dir/target-* 2>/dev/null | head -1)
-            mkdir -p "$STG_BP/usr/include/mac80211"
-            cp -r "$BACKPORT_SRC/include/"* "$STG_BP/usr/include/mac80211/" 2>/dev/null || echo "WARNING: copy backports include/ failed"
-            mkdir -p "$STG_BP/usr/include/mac80211-backport"
-            cp -r "$BACKPORT_SRC/backport-include/"* "$STG_BP/usr/include/mac80211-backport/" 2>/dev/null || echo "WARNING: copy backport-include/ failed"
-            mkdir -p "$STG_BP/usr/include/mac80211-backport/backport"
-            cp "$BACKPORT_SRC/backport/autoconf.h" "$STG_BP/usr/include/mac80211-backport/backport/" 2>/dev/null || echo "WARNING: no backport/autoconf.h in backports source"
+          if [ -z "$BACKPORT_SRC" ]; then
+            BACKPORT_SRC=$(find build_dir -name 'backports-6.18.26' -type d 2>/dev/null | head -1)
+            echo "BACKPORT_SRC (fallback)=$BACKPORT_SRC"
           fi
-          echo "=== backports cfg80211.h in staging ==="
+          STG_BP=$(ls -d staging_dir/target-* 2>/dev/null | head -1)
+          echo "STG_BP=$STG_BP"
+          if [ -n "$BACKPORT_SRC" ] && [ -n "$STG_BP" ]; then
+            rm -rf "$STG_BP/usr/include/mac80211" "$STG_BP/usr/include/mac80211-backport"
+            mkdir -p "$STG_BP/usr/include/mac80211" "$STG_BP/usr/include/mac80211-backport" "$STG_BP/usr/include/mac80211-backport/backport"
+            cp -r "$BACKPORT_SRC/include/"* "$STG_BP/usr/include/mac80211/" 2>/dev/null || echo "WARNING: copy backports include/ failed"
+            cp -r "$BACKPORT_SRC/net/mac80211/"*.h "$STG_BP/usr/include/mac80211/" 2>/dev/null || echo "WARNING: copy net/mac80211 h failed"
+            cp -r "$BACKPORT_SRC/backport-include/"* "$STG_BP/usr/include/mac80211-backport/" 2>/dev/null || echo "WARNING: copy backport-include/ failed"
+            AUTOCONF_H=$(find "$BACKPORT_SRC" -name autoconf.h -path '*/backport/*' 2>/dev/null | head -1)
+            echo "AUTOCONF_H=$AUTOCONF_H"
+            if [ -n "$AUTOCONF_H" ]; then
+              cp "$AUTOCONF_H" "$STG_BP/usr/include/mac80211-backport/backport/autoconf.h"
+            else
+              echo "WARNING: backport/autoconf.h NOT found!"
+            fi
+          fi
+          echo "=== backports headers in staging ==="
           ls staging_dir/target-*/usr/include/mac80211/net/cfg80211.h 2>/dev/null || echo "WARNING: no backports cfg80211.h in staging!"
-          ls staging_dir/target-*/usr/include/mac80211-backport/backport/ 2>/dev/null | head -5 || true
+          ls staging_dir/target-*/usr/include/mac80211/net/mac80211.h 2>/dev/null || echo "WARNING: no mac80211.h in staging!"
+          ls staging_dir/target-*/usr/include/mac80211-backport/backport/ 2>/dev/null || echo "WARNING: no backport dir in staging!"
 
           # has_he fix: prepare first to extract source, then sed with exact path
           echo "Preparing aic8800 source (extract + apply other patches) at $(date)"
