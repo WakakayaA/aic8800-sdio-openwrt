@@ -189,6 +189,31 @@ jobs:
           echo "Building mac80211 with M28K config + class.h owner patch at $(date)"
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
 
+          # CRITICAL (struct wiphy ABI): install backports headers to STAGING_DIR
+          # so aic8800 builds against backports-6.18.26 cfg80211.h.
+          # backports struct wiphy has multi-radio fields (n_radios@+0x520,
+          # radios@+0x528); kernel 6.12.94 cfg80211.h lacks them. If aic8800 uses
+          # the kernel headers, its priv (rwnx_hw) lands at wiphy+0x520 which
+          # cfg80211.ko reads as n_radios -> wiphy_register walks the multi-radio
+          # path and fails wiphy_verify_iface_combinations (core.c:642).
+          echo "Installing mac80211 headers (InstallDev) at $(date)"
+          make package/mac80211/install V=s > /tmp/mac80211_install.log 2>&1; echo "mac80211 install rc=$?"
+          # ALSO copy headers directly from backports source tree (belt & braces)
+          BACKPORT_SRC=$(find build_dir -path "*/mac80211-regular/backports-6.18.26" -type d 2>/dev/null | head -1)
+          echo "BACKPORT_SRC=$BACKPORT_SRC"
+          if [ -n "$BACKPORT_SRC" ]; then
+            STG_BP=$(ls -d staging_dir/target-* 2>/dev/null | head -1)
+            mkdir -p "$STG_BP/usr/include/mac80211"
+            cp -r "$BACKPORT_SRC/include/"* "$STG_BP/usr/include/mac80211/" 2>/dev/null || echo "WARNING: copy backports include/ failed"
+            mkdir -p "$STG_BP/usr/include/mac80211-backport"
+            cp -r "$BACKPORT_SRC/backport-include/"* "$STG_BP/usr/include/mac80211-backport/" 2>/dev/null || echo "WARNING: copy backport-include/ failed"
+            mkdir -p "$STG_BP/usr/include/mac80211-backport/backport"
+            cp "$BACKPORT_SRC/backport/autoconf.h" "$STG_BP/usr/include/mac80211-backport/backport/" 2>/dev/null || echo "WARNING: no backport/autoconf.h in backports source"
+          fi
+          echo "=== backports cfg80211.h in staging ==="
+          ls staging_dir/target-*/usr/include/mac80211/net/cfg80211.h 2>/dev/null || echo "WARNING: no backports cfg80211.h in staging!"
+          ls staging_dir/target-*/usr/include/mac80211-backport/backport/ 2>/dev/null | head -5 || true
+
           # has_he fix: prepare first to extract source, then sed with exact path
           echo "Preparing aic8800 source (extract + apply other patches) at $(date)"
           make package/aic8800-sdio/prepare V=s > /tmp/aic8800_prepare.log 2>&1; echo "aic8800 prepare rc=$?"
@@ -218,6 +243,16 @@ jobs:
             readelf -SW "$ko" 2>/dev/null | grep this_module || true
             modinfo "$ko" 2>/dev/null | grep -E "vermagic|filename" || true
           done
+          echo "=== Check aic8800 compile used backports headers ==="
+          grep -o "mac80211-backport[^ \"]*" /tmp/aic8800.log 2>/dev/null | head -3 || echo "no mac80211-backport path in log"
+          echo "=== Verify wiphy_priv offset in aic8800_fdrv.ko (should be >0x520 if backports headers used) ==="
+          FDRV_KO=$(find . -name 'aic8800_fdrv.ko' | head -1)
+          echo "FDRV_KO=$FDRV_KO"
+          if [ -n "$FDRV_KO" ]; then
+            python3 "$GITHUB_WORKSPACE/aic8800-sdio-openwrt/verify_wiphy.py" "$FDRV_KO" || true
+          else
+            echo "aic8800_fdrv.ko not found, skipping wiphy layout verify"
+          fi
           true
 
       - name: Collect kernel modules and firmware

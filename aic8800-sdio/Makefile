@@ -28,7 +28,7 @@ include $(INCLUDE_DIR)/package.mk
 define KernelPackage/aic8800-sdio
   SUBMENU:=Wireless Drivers
   TITLE:=AIC8800D80 Wi-Fi 6 SDIO driver
-  DEPENDS:=+kmod-cfg80211 +kmod-mmc
+  DEPENDS:=+kmod-cfg80211 +kmod-mac80211 +kmod-mmc
   FILES:= \
 	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aic8800_fdrv.ko \
 	$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aic8800_bsp.ko
@@ -56,13 +56,32 @@ EXTRA_CFLAGS += \
 	-DCONFIG_AIC8800_WLAN_SUPPORT=1 \
 	-DAICWF_SDIO_SUPPORT \
 	-DCONFIG_USE_P2P0 \
+	-DCONFIG_BACKPORTS_BUILD \
 	-Wno-error
+
+# CRITICAL: Build against backports-6.18.26 headers (same headers used to build
+# cfg80211.ko/mac80211.ko), so struct wiphy layout matches cfg80211.ko
+# (multi-radio fields: n_radios @ +0x520, radios @ +0x528). Kernel 6.12.94's
+# cfg80211.h LACKS the multi-radio fields, so the driver's priv (rwnx_hw) lands
+# at wiphy+0x520 which cfg80211.ko reads as n_radios -> wiphy_register walks the
+# multi-radio path and fails wiphy_verify_iface_combinations() at core.c:642.
+# NOSTDINC_FLAGS appears BEFORE LINUXINCLUDE in Kbuild's c_flags, so these -I
+# paths take precedence over the kernel headers.
+NOSTDINC_FLAGS = \
+	$(KERNEL_NOSTDINC_FLAGS) \
+	-I$(STAGING_DIR)/usr/include/mac80211-backport/uapi \
+	-I$(STAGING_DIR)/usr/include/mac80211-backport \
+	-I$(STAGING_DIR)/usr/include/mac80211/uapi \
+	-I$(STAGING_DIR)/usr/include/mac80211 \
+	-include backport/autoconf.h \
+	-include backport/backport.h
 
 MAKE_OPTS:= \
 	$(KERNEL_MAKE_FLAGS) \
 	M="$(PKG_BUILD_DIR)/src/SDIO/driver_fw/driver/aic8800" \
 	KERNELDIR="$(LINUX_DIR)" \
 	EXTRA_CFLAGS="$(EXTRA_CFLAGS)" \
+	NOSTDINC_FLAGS="$(NOSTDINC_FLAGS)" \
 	CONFIG_AIC8800_BTLPM_SUPPORT=n
 
 define Build/Compile

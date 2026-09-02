@@ -6,7 +6,7 @@ Index: aic8800/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
++#if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 + unsigned int link_id,
 +#endif
  #endif
@@ -20,7 +20,7 @@ Index: aic8800/src/PCIE/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
  static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
++#if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 + unsigned int link_id,
 +#endif
  #endif
@@ -34,7 +34,7 @@ Index: aic8800/src/USB/driver_fw/drivers/aic8800/aic8800_fdrv/rwnx_main.c
  static int rwnx_cfg80211_get_tx_power(struct wiphy *wiphy,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
-+#if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
++#if defined(CONFIG_BACKPORTS_BUILD) || LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
 + unsigned int link_id,
 +#endif
  #endif

@@ -6,7 +6,7 @@ index ad6c52d..a61247f 100644
  }
  
  bool rwnx_cfg80211_rx_spurious_frame(struct net_device *dev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  				const u8 *addr, gfp_t gfp)
 +#else
 +				const u8 *addr, int link_id, gfp_t gfp)
@@ -18,7 +18,7 @@ index ad6c52d..a61247f 100644
  }
  
  bool rwnx_cfg80211_rx_unexpected_4addr_frame(struct net_device *dev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  				const u8 *addr, gfp_t gfp)
 +#else
 +				const u8 *addr, int link_id, gfp_t gfp)
@@ -34,7 +34,7 @@ index 5f1e91e..b757b7e 100644
   *	have changed. The actual parameter values are available in
   *	struct wiphy. If returning an error, no value should be changed.
   */
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, u32 changed)
 +#else
 +static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, int radio_idx, u32 changed)
@@ -46,7 +46,7 @@ index 5f1e91e..b757b7e 100644
   *	(as advertised by the nl80211 feature flag.)
   */
  static int rwnx_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  									  enum nl80211_tx_power_setting type, int mbm)
 +#else
 +									  int radio_idx, enum nl80211_tx_power_setting type, int mbm)
@@ -58,7 +58,7 @@ index 5f1e91e..b757b7e 100644
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
-+#if LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
   unsigned int link_id,
 +#else
 + int radio_idx, unsigned int link_id,
@@ -74,7 +74,7 @@ index 4b9a0f4..5a96fff 100644
          hdr = (struct ieee80211_hdr *)(skb->data + msdu_offset);
          rwnx_vif = rwnx_rx_get_vif(rwnx_hw, hw_rxhdr->flags_vif_idx);
          if (rwnx_vif) {
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
              cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, GFP_ATOMIC);
 +#else
 +            cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, -1, GFP_ATOMIC);
@@ -86,7 +86,7 @@ index 4b9a0f4..5a96fff 100644
  
                  if (hw_rxhdr->flags_is_4addr && !rwnx_vif->use_4addr) {
                      cfg80211_rx_unexpected_4addr_frame(rwnx_vif->ndev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
                                                         sta->mac_addr, GFP_ATOMIC);
 +#else
 +                                                       sta->mac_addr, -1, GFP_ATOMIC);
@@ -98,7 +98,7 @@ index 4b9a0f4..5a96fff 100644
  		hdr = (struct ieee80211_hdr *)(skb->data + msdu_offset);
  		rwnx_vif = rwnx_rx_get_vif(rwnx_hw, hw_rxhdr->flags_vif_idx);
  		if (rwnx_vif) {
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  			rwnx_cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, GFP_ATOMIC);
 +#else
 +			rwnx_cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, -1, GFP_ATOMIC);
@@ -110,7 +110,7 @@ index 4b9a0f4..5a96fff 100644
  				if (hw_rxhdr->flags_is_4addr && !rwnx_vif->use_4addr) {
  					printk("aicwf: 4addr flag error\n");
  					rwnx_cfg80211_rx_unexpected_4addr_frame(rwnx_vif->ndev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  													   sta->mac_addr, GFP_ATOMIC);
 +#else
 +													   sta->mac_addr, -1, GFP_ATOMIC);
@@ -126,7 +126,7 @@ index 0b4455a..f330e38 100644
   *	have changed. The actual parameter values are available in
   *	struct wiphy. If returning an error, no value should be changed.
   */
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, u32 changed)
 +#else
 +static int rwnx_cfg80211_set_wiphy_params(struct wiphy *wiphy, int radio_idx, u32 changed)
@@ -138,7 +138,7 @@ index 0b4455a..f330e38 100644
   *	(as advertised by the nl80211 feature flag.)
   */
  static int rwnx_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
  									  enum nl80211_tx_power_setting type, int mbm)
 +#else
 +									  int radio_idx, enum nl80211_tx_power_setting type, int mbm)
@@ -150,7 +150,7 @@ index 0b4455a..f330e38 100644
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
   unsigned int link_id,
 +#else
 + int radio_idx, unsigned int link_id,
@@ -166,7 +166,7 @@ index da726dc..04964ff 100644
  #ifdef CONFIG_GKI
  			rwnx_cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, GFP_ATOMIC);
  #else
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
              cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, GFP_ATOMIC);
 +#else
 +            cfg80211_rx_spurious_frame(rwnx_vif->ndev, hdr->addr2, -1, GFP_ATOMIC);
@@ -178,7 +178,7 @@ index da726dc..04964ff 100644
  													   sta->mac_addr, GFP_ATOMIC);
  #else
                      cfg80211_rx_unexpected_4addr_frame(rwnx_vif->ndev,
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0)
                                                         sta->mac_addr, GFP_ATOMIC);
 +#else
 +                                                       sta->mac_addr, -1, GFP_ATOMIC);
@@ -194,7 +194,7 @@ index 06d6096..804dc2d 100644
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
   struct wireless_dev *wdev,
  #if LINUX_VERSION_CODE >= KERNEL_VERSION (6, 14, 0)
-+#if LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
++#if !defined(CONFIG_BACKPORTS_BUILD) && LINUX_VERSION_CODE < KERNEL_VERSION (6, 17, 0)
   unsigned int link_id,
 +#else
 + int radio_idx, unsigned int link_id,
