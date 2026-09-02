@@ -189,31 +189,7 @@ jobs:
           echo "Building mac80211 with M28K config + class.h owner patch at $(date)"
           make package/mac80211/compile V=s -j$(nproc) > /tmp/mac80211.log 2>&1; echo "mac80211 rc=$?"
 
-          # CRITICAL HE FIX: aic8800 driver sets .has_he = false in RWNX_HE_CAPABILITIES
-          # but still advertises iftype_data with HE capabilities. Newer kernels (6.x)
-          # validate that iftype_data he_cap.has_he must be true, causing wiphy_register()
-          # to fail with -EINVAL at core.c:970. AIC8800D80 is Wi-Fi 6, so set has_he=true.
-          # CRITICAL: must prepare package first to extract source to build_dir,
-          # otherwise find won't locate rwnx_main.c and sed patch silently fails.
-          echo "Preparing aic8800-sdio package (extract source)..."
-          make package/aic8800-sdio/prepare V=s > /tmp/aic8800_prepare.log 2>&1; echo "aic8800 prepare rc=$?"
-          echo "=== Patching rwnx_main.c has_he false -> true ==="
-          echo "Searching for rwnx_main.c in build_dir..."
-          find openwrt/build_dir -name "rwnx_main.c" 2>/dev/null | head -10
-          RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" -path "*SDIO*" 2>/dev/null | head -1)
-          if [ -z "$RWNX_MAIN" ]; then
-            RWNX_MAIN=$(find openwrt/build_dir -name "rwnx_main.c" 2>/dev/null | head -1)
-          fi
-          echo "RWNX_MAIN=$RWNX_MAIN"
-          if [ -n "$RWNX_MAIN" ]; then
-            grep -n "has_he" "$RWNX_MAIN" | head -5
-            sed -i 's/\.has_he = false/\.has_he = true/' "$RWNX_MAIN"
-            echo "Patched. Verifying:"
-            grep -n "has_he" "$RWNX_MAIN" | head -5
-          else
-            echo "WARNING: rwnx_main.c not found!"
-          fi
-
+          # has_he fix is now applied via patches/160-fix-he-cap-has-he.patch (quilt auto-applies)
           echo "Building aic8800 driver at $(date)"
           make package/aic8800-sdio/compile V=s -j$(nproc) > /tmp/aic8800.log 2>&1; echo "aic8800 rc=$?"
 

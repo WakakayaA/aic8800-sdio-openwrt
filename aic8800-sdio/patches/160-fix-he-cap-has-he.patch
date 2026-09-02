@@ -1,27 +1,10 @@
-From: Fix HE capabilities has_he flag for newer kernels
-Subject: [PATCH] aic8800: fix .has_he = false in RWNX_HE_CAPABILITIES
-
-In newer kernels (6.x), wiphy_register() validates that if a driver
-advertises iftype_data with HE capabilities, the has_he flag must be
-true. The aic8800 driver sets .has_he = false in RWNX_HE_CAPABILITIES
-but still sets iftype_data = &rwnx_he_capa and n_iftype_data = 1,
-causing wiphy_register() to fail with -EINVAL at core.c:970.
-
-AIC8800D80 is a Wi-Fi 6 (802.11ax) chip, so HE support is expected.
-Set has_he = true to pass the kernel validation.
-
-Signed-off-by: Fix
----
- src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
-index 1234567..abcdefg 100644
 --- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
 +++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
-@@ -XXX,XX +XXX,XX @@
+@@ -1200,7 +1200,7 @@ static const struct ieee80211_if_combination rwnx_limits_dfs[] = {
  #define RWNX_HE_CAPABILITIES                                    \
  {                                                               \
 -    .has_he = false,                                            \
 +    .has_he = true,                                             \
      .he_cap_elem = {                                            \
+         .mac_capab = {                                          \
+             .ht40 = true,                                       \

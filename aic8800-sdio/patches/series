@@ -12,3 +12,4 @@
 120-fix-linux-6.17-build.patch
 130-fix-linux-6.19-build.patch
 140-fix-vmalloc-not-include.patch
+160-fix-he-cap-has-he.patch
