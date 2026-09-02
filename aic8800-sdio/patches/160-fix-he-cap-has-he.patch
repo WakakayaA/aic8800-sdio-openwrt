@@ -1,6 +1,6 @@
 --- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
 +++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
-@@ -1200,7 +1200,7 @@ static const struct ieee80211_if_combination rwnx_limits_dfs[] = {
+@@ -1,7 +1,7 @@
  #define RWNX_HE_CAPABILITIES                                    \
  {                                                               \
 -    .has_he = false,                                            \
