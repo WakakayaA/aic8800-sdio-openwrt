@@ -1,4 +1,4 @@
-name: Build M28K full firmware with AIC8800
+name: Build M28K firmware ImmortalWrt 25.12 with AIC8800
 
 on:
   workflow_dispatch:
@@ -25,51 +25,39 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Clone OpenWrt 25.12 @ 6.12.94 and add M28K
+      - name: Clone ImmortalWrt 25.12 and verify M28K support
         run: |
-          git clone --filter=blob:none --no-checkout --branch openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
+          git clone --filter=blob:none --no-checkout --branch openwrt-25.12 https://github.com/immortalwrt/immortalwrt.git openwrt
           cd openwrt
-          git checkout 6bad5f2050
+          git checkout 1d34e7b88708d4eeb3feabe0b2b6f835a909c9c0
+          echo "=== kernel version ==="
           grep LINUX_VERSION-6.12 target/linux/generic/kernel-6.12
-          cat $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k-devices.mk >> target/linux/rockchip/image/armv8.mk
-          KDT=target/linux/rockchip/files/arch/arm64/boot/dts/rockchip
-          mkdir -p $KDT
-          cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k-dts/*.dts* $KDT/
-          # FIX: vanilla OpenWrt 25.12 rk3528.dtsi (mainline backport) has NO rng node,
-          # while the M28K dts was written for the vendor/Kwrt kernel which does.
-          # Remove the '&rng { status="okay"; };' block so DTC can resolve all labels.
-          sed -i '/^&rng {/,/^};/d' $KDT/rk3528-mangopi-m28.dtsi
-          echo "=== after rng fix, remaining rng refs ==="
-          grep -c "&rng" $KDT/rk3528-mangopi-m28.dtsi || echo "0 rng refs (fix applied)"
-          echo "=== M28K in armv8.mk ==="
-          grep -i m28k target/linux/rockchip/image/armv8.mk | head
-          ls $KDT/ | grep m28
+          echo "=== M28K device built-in ==="
+          grep -A6 'define Device/widora_mangopi-m28k\b' target/linux/rockchip/image/armv8.mk
+          echo "=== M28K kernel DTS present ==="
+          ls target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/ | grep m28
+          echo "=== aic8800 package present ==="
+          ls -la package/kernel/aic8800/Makefile
+          echo "=== M28K uboot present ==="
+          grep -A5 'define U-Boot/mangopi-m28k-rk3528' package/boot/uboot-rockchip/Makefile
 
       - name: Update feeds
         run: |
           cd openwrt
-          echo "src-cpy aic8800 $GITHUB_WORKSPACE/aic8800-sdio-openwrt" >> feeds.conf.default
-          sed -i 's|https://git.openwrt.org/feed/packages.git|https://github.com/openwrt/packages.git|' feeds.conf.default
-          sed -i 's|https://git.openwrt.org/project/luci.git|https://github.com/openwrt/luci.git|' feeds.conf.default
-          sed -i 's|https://git.openwrt.org/feed/routing.git|https://github.com/openwrt/routing.git|' feeds.conf.default
-          sed -i 's|https://git.openwrt.org/feed/telephony.git|https://github.com/openwrt/telephony.git|' feeds.conf.default
-          sed -i 's|^src-git telephony|#src-git telephony|' feeds.conf.default
-          sed -i 's|^src-git video|#src-git video|' feeds.conf.default
           ./scripts/feeds update -a 2>&1 | tail -20
           ./scripts/feeds install -a 2>&1 | tail -20
 
-      - name: Configure M28K + aic8800
+      - name: Configure M28K device
         run: |
           cd openwrt
           echo "CONFIG_TARGET_rockchip=y" > .config
           echo "CONFIG_TARGET_rockchip_armv8=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_rockchip_armv8_DEVICE_widora_mangopi-m28k=y" >> .config
-          echo "CONFIG_PACKAGE_aic8800-sdio-firmware=y" >> .config
+          echo "CONFIG_TARGET_rockchip_armv8_DEVICE_widora_mangopi-m28k=y" >> .config
           make defconfig
           echo "=== target config ==="
-          grep -E "^CONFIG_TARGET" .config | head -10
-          echo "=== aic8800/wpad selected? ==="
-          grep -E "aic8800|wpad" .config | head
+          grep -E "^CONFIG_TARGET" .config | head -8
+          echo "=== aic8800/wpad selected ==="
+          grep -E "aic8800|wpad|r8169" .config | head
 
       - name: Build firmware
         run: |
@@ -79,17 +67,16 @@ jobs:
           ls -la bin/targets/rockchip/armv8/
 
       - name: Collect images and logs
-        if: always()
         run: |
-          mkdir -p output
-          cp /tmp/build.log output/build.log 2>/dev/null || true
-          find openwrt/bin/targets/rockchip/armv8/ -maxdepth 1 -type f \( -name '*.img.gz' -o -name '*.img' \) -exec cp {} output/ \; 2>/dev/null || true
-          ls -la output/
+          mkdir -p /tmp/artifacts
+          cp openwrt/bin/targets/rockchip/armv8/*sysupgrade*.img.gz /tmp/artifacts/ 2>/dev/null || true
+          cp /tmp/build.log /tmp/artifacts/ 2>/dev/null || true
+          echo "=== artifact contents ==="
+          ls -la /tmp/artifacts/
 
       - name: Upload artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m28k-openwrt-firmware
-          path: output/*
-          if-no-files-found: warn
+          path: /tmp/artifacts/
+          retention-days: 7
