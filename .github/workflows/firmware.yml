@@ -35,6 +35,12 @@ jobs:
           KDT=target/linux/rockchip/files/arch/arm64/boot/dts/rockchip
           mkdir -p $KDT
           cp $GITHUB_WORKSPACE/aic8800-sdio-openwrt/m28k-dts/*.dts* $KDT/
+          # FIX: vanilla OpenWrt 25.12 rk3528.dtsi (mainline backport) has NO rng node,
+          # while the M28K dts was written for the vendor/Kwrt kernel which does.
+          # Remove the '&rng { status="okay"; };' block so DTC can resolve all labels.
+          sed -i '/^&rng {/,/^};/d' $KDT/rk3528-mangopi-m28.dtsi
+          echo "=== after rng fix, remaining rng refs ==="
+          grep -c "&rng" $KDT/rk3528-mangopi-m28.dtsi || echo "0 rng refs (fix applied)"
           echo "=== M28K in armv8.mk ==="
           grep -i m28k target/linux/rockchip/image/armv8.mk | head
           ls $KDT/ | grep m28
