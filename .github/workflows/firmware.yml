@@ -69,16 +69,9 @@ jobs:
           echo "CONFIG_XFRM_ALGO=y" >> $KCFG
           echo "CONFIG_XFRM_USER=y" >> $KCFG
           echo "CONFIG_XFRM_INTERFACE=y" >> $KCFG
-          echo "CONFIG_INET_AH=y" >> $KCFG
-          echo "CONFIG_INET_ESP=y" >> $KCFG
-          echo "CONFIG_INET_IPCOMP=y" >> $KCFG
-          echo "CONFIG_INET_XFRM_TUNNEL=y" >> $KCFG
-          echo "CONFIG_INET_TUNNEL=y" >> $KCFG
-          echo "CONFIG_INET6_XFRM_TUNNEL=y" >> $KCFG
-          echo "CONFIG_INET6_ESP=y" >> $KCFG
-          echo "CONFIG_INET6_AH=y" >> $KCFG
-          echo "CONFIG_INET6_IPCOMP=y" >> $KCFG
           echo "CONFIG_NET_KEY=y" >> $KCFG
+          echo "# Explicitly disable ESP offload to avoid NEW kconfig prompt" >> $KCFG
+          echo "CONFIG_INET_ESP_OFFLOAD=n" >> $KCFG
           echo "# NAT core" >> $KCFG
           echo "CONFIG_NF_NAT=y" >> $KCFG
           echo "CONFIG_NF_NAT_MASQUERADE=y" >> $KCFG
@@ -92,8 +85,15 @@ jobs:
           echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> $KCFG
           echo "=== XFRM entries added ==="
           grep -c "CONFIG_XFRM=y" $KCFG
-          echo "=== regenerate kernel config ==="
-          make target/linux/clean V=s 2>&1 | tail -5
+          echo "=== clean and prepare kernel to run olddefconfig ==="
+          make target/linux/clean V=s 2>&1 | tail -3
+          make target/linux/prepare V=s 2>&1 | tail -5
+          echo "=== run olddefconfig to resolve all NEW options ==="
+          KDIR=$(ls -d build_dir/target-*/linux-*/linux-* 2>/dev/null | head -1)
+          echo "Kernel dir: $KDIR"
+          if [ -n "$KDIR" ] && [ -f "$KDIR/Makefile" ]; then
+            make -C "$KDIR" olddefconfig ARCH=arm64 CROSS_COMPILE=aarch64-openwrt-linux-musl- 2>&1 | tail -10 || echo "olddefconfig failed, continuing anyway"
+          fi
 
       - name: Build firmware
         run: |
