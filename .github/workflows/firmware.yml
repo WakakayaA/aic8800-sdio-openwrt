@@ -59,6 +59,42 @@ jobs:
           echo "=== aic8800/wpad selected ==="
           grep -E "aic8800|wpad|r8169" .config | head
 
+      - name: Enable XFRM and full NAT in kernel config (fixes masquerade)
+        run: |
+          cd openwrt
+          KCFG=target/linux/rockchip/armv8/config-6.12
+          echo "" >> $KCFG
+          echo "# XFRM (IPsec framework) - required by nf_nat" >> $KCFG
+          echo "CONFIG_XFRM=y" >> $KCFG
+          echo "CONFIG_XFRM_ALGO=y" >> $KCFG
+          echo "CONFIG_XFRM_USER=y" >> $KCFG
+          echo "CONFIG_XFRM_INTERFACE=y" >> $KCFG
+          echo "CONFIG_INET_AH=y" >> $KCFG
+          echo "CONFIG_INET_ESP=y" >> $KCFG
+          echo "CONFIG_INET_IPCOMP=y" >> $KCFG
+          echo "CONFIG_INET_XFRM_TUNNEL=y" >> $KCFG
+          echo "CONFIG_INET_TUNNEL=y" >> $KCFG
+          echo "CONFIG_INET6_XFRM_TUNNEL=y" >> $KCFG
+          echo "CONFIG_INET6_ESP=y" >> $KCFG
+          echo "CONFIG_INET6_AH=y" >> $KCFG
+          echo "CONFIG_INET6_IPCOMP=y" >> $KCFG
+          echo "CONFIG_NET_KEY=y" >> $KCFG
+          echo "# NAT core" >> $KCFG
+          echo "CONFIG_NF_NAT=y" >> $KCFG
+          echo "CONFIG_NF_NAT_MASQUERADE=y" >> $KCFG
+          echo "CONFIG_NF_TABLES=y" >> $KCFG
+          echo "CONFIG_NFT_MASQ=y" >> $KCFG
+          echo "CONFIG_NFT_NAT=y" >> $KCFG
+          echo "CONFIG_NFT_CHAIN_NAT=y" >> $KCFG
+          echo "CONFIG_IP_NF_NAT=y" >> $KCFG
+          echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> $KCFG
+          echo "CONFIG_IP6_NF_NAT=y" >> $KCFG
+          echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> $KCFG
+          echo "=== XFRM entries added ==="
+          grep -c "CONFIG_XFRM=y" $KCFG
+          echo "=== regenerate kernel config ==="
+          make target/linux/clean V=s 2>&1 | tail -5
+
       - name: Build firmware
         run: |
           cd openwrt
