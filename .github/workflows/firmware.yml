@@ -83,6 +83,19 @@ jobs:
           echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> $KCFG
           echo "CONFIG_IP6_NF_NAT=y" >> $KCFG
           echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> $KCFG
+          echo "# Transparent proxy support (Passwall2 tproxy/redirect)" >> $KCFG
+          echo "CONFIG_IP_TRANSPARENT=y" >> $KCFG
+          echo "CONFIG_NF_NAT_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_NAT_IPV6=y" >> $KCFG
+          echo "CONFIG_NF_NAT_REDIRECT=y" >> $KCFG
+          echo "CONFIG_NFT_REDIR=y" >> $KCFG
+          echo "CONFIG_NFT_TPROXY=y" >> $KCFG
+          echo "CONFIG_NFT_SOCKET=y" >> $KCFG
+          echo "CONFIG_NF_SOCKET_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_SOCKET_IPV6=y" >> $KCFG
+          echo "CONFIG_NF_TPROXY_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_TPROXY_IPV6=y" >> $KCFG
+          echo "CONFIG_TUN=y" >> $KCFG
           echo "=== XFRM entries added ==="
           grep -c "CONFIG_XFRM=y" $KCFG
           echo "=== clean and prepare kernel to run olddefconfig ==="
