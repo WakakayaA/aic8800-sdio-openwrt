@@ -96,6 +96,9 @@ jobs:
           echo "CONFIG_NF_TPROXY_IPV4=y" >> $KCFG
           echo "CONFIG_NF_TPROXY_IPV6=y" >> $KCFG
           echo "CONFIG_TUN=y" >> $KCFG
+          echo "# BBR congestion control (built-in for stable transparent proxy speed)" >> $KCFG
+          echo "CONFIG_TCP_CONG_BBR=y" >> $KCFG
+          echo "CONFIG_DEFAULT_BBR=y" >> $KCFG
           echo "=== XFRM entries added ==="
           grep -c "CONFIG_XFRM=y" $KCFG
           echo "=== clean and prepare kernel to run olddefconfig ==="
