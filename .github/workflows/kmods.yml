@@ -1,4 +1,4 @@
-name: Build M28K kmods (tproxy/tun/socket/bbr)
+name: Build M28K kmods (tproxy/tun/socket/bbr) [kernel-hash-matched]
 
 on:
   workflow_dispatch:
@@ -52,6 +52,55 @@ jobs:
           echo "=== selected kmods ==="
           grep -E "kmod-nft-tproxy|kmod-nft-socket|kmod-tun|kmod-nf-tproxy|kmod-nf-socket|kmod-nft-core|kmod-tcp-bbr" .config
 
+      - name: Enable XFRM and full NAT in kernel config (match board firmware hash)
+        run: |
+          cd openwrt
+          KCFG=target/linux/rockchip/armv8/config-6.12
+          echo "" >> $KCFG
+          echo "# XFRM (IPsec framework) - required by nf_nat" >> $KCFG
+          echo "CONFIG_XFRM=y" >> $KCFG
+          echo "CONFIG_XFRM_ALGO=y" >> $KCFG
+          echo "CONFIG_XFRM_USER=y" >> $KCFG
+          echo "CONFIG_XFRM_INTERFACE=y" >> $KCFG
+          echo "CONFIG_NET_KEY=y" >> $KCFG
+          echo "# Explicitly disable ESP offload to avoid NEW kconfig prompt" >> $KCFG
+          echo "CONFIG_INET_ESP_OFFLOAD=n" >> $KCFG
+          echo "# NAT core" >> $KCFG
+          echo "CONFIG_NF_NAT=y" >> $KCFG
+          echo "CONFIG_NF_NAT_MASQUERADE=y" >> $KCFG
+          echo "CONFIG_NF_TABLES=y" >> $KCFG
+          echo "CONFIG_NFT_MASQ=y" >> $KCFG
+          echo "CONFIG_NFT_NAT=y" >> $KCFG
+          echo "CONFIG_NFT_CHAIN_NAT=y" >> $KCFG
+          echo "CONFIG_IP_NF_NAT=y" >> $KCFG
+          echo "CONFIG_IP_NF_TARGET_MASQUERADE=y" >> $KCFG
+          echo "CONFIG_IP6_NF_NAT=y" >> $KCFG
+          echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> $KCFG
+          echo "# Transparent proxy support (Passwall2 tproxy/redirect)" >> $KCFG
+          echo "CONFIG_IP_TRANSPARENT=y" >> $KCFG
+          echo "CONFIG_NF_NAT_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_NAT_IPV6=y" >> $KCFG
+          echo "CONFIG_NF_NAT_REDIRECT=y" >> $KCFG
+          echo "CONFIG_NFT_REDIR=y" >> $KCFG
+          echo "CONFIG_NFT_TPROXY=y" >> $KCFG
+          echo "CONFIG_NFT_SOCKET=y" >> $KCFG
+          echo "CONFIG_NF_SOCKET_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_SOCKET_IPV6=y" >> $KCFG
+          echo "CONFIG_NF_TPROXY_IPV4=y" >> $KCFG
+          echo "CONFIG_NF_TPROXY_IPV6=y" >> $KCFG
+          echo "CONFIG_TUN=y" >> $KCFG
+          echo "=== XFRM entries added ==="
+          grep -c "CONFIG_XFRM=y" $KCFG
+          echo "=== clean and prepare kernel to run olddefconfig ==="
+          make target/linux/clean V=s 2>&1 | tail -3
+          make target/linux/prepare V=s 2>&1 | tail -5
+          echo "=== run olddefconfig to resolve all NEW options ==="
+          KDIR=$(ls -d build_dir/target-*/linux-*/linux-* 2>/dev/null | head -1)
+          echo "Kernel dir: $KDIR"
+          if [ -n "$KDIR" ] && [ -f "$KDIR/Makefile" ]; then
+            make -C "$KDIR" olddefconfig ARCH=arm64 CROSS_COMPILE=aarch64-openwrt-linux-musl- 2>&1 | tail -10 || echo "olddefconfig failed, continuing anyway"
+          fi
+
       - name: Build kmods
         run: |
           cd openwrt
@@ -65,7 +114,6 @@ jobs:
         run: |
           mkdir -p /tmp/kmods
           cd openwrt
-          # target dir packages first
           cp bin/targets/rockchip/armv8/packages/kmod-nft-tproxy*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-nft-socket*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-tun*.apk /tmp/kmods/ 2>/dev/null || true
@@ -73,7 +121,6 @@ jobs:
           cp bin/targets/rockchip/armv8/packages/kmod-nf-socket*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-nft-core*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-tcp-bbr*.apk /tmp/kmods/ 2>/dev/null || true
-          # generic packages fallback
           find bin/packages -name "kmod-nft-tproxy*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           find bin/packages -name "kmod-nft-socket*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           find bin/packages -name "kmod-tun*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
