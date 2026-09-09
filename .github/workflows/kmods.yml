@@ -1,4 +1,4 @@
-name: Build M28K kmods (tproxy/tun/socket)
+name: Build M28K kmods (tproxy/tun/socket/bbr)
 
 on:
   workflow_dispatch:
@@ -47,18 +47,19 @@ jobs:
           echo "CONFIG_PACKAGE_kmod-nft-tproxy=y" >> .config
           echo "CONFIG_PACKAGE_kmod-nft-socket=y" >> .config
           echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> .config
           make defconfig
           echo "=== selected kmods ==="
-          grep -E "kmod-nft-tproxy|kmod-nft-socket|kmod-tun|kmod-nf-tproxy|kmod-nf-socket|kmod-nft-core" .config
+          grep -E "kmod-nft-tproxy|kmod-nft-socket|kmod-tun|kmod-nf-tproxy|kmod-nf-socket|kmod-nft-core|kmod-tcp-bbr" .config
 
       - name: Build kmods
         run: |
           cd openwrt
           make -j$(nproc) V=s > /tmp/build.log 2>&1 || { echo "BUILD FAILED rc=$?"; tail -80 /tmp/build.log; exit 1; }
           echo "=== target packages ==="
-          ls bin/targets/rockchip/armv8/packages/ 2>/dev/null | grep -E "kmod-(nft-tproxy|nft-socket|tun|nf-tproxy|nf-socket|nft-core)" || true
+          ls bin/targets/rockchip/armv8/packages/ 2>/dev/null | grep -E "kmod-(nft-tproxy|nft-socket|tun|nf-tproxy|nf-socket|nft-core|tcp-bbr)" || true
           echo "=== generic packages ==="
-          find bin/packages -name "kmod-nft-tproxy*.apk" -o -name "kmod-nft-socket*.apk" -o -name "kmod-tun*.apk" -o -name "kmod-nf-tproxy*.apk" -o -name "kmod-nf-socket*.apk" 2>/dev/null | head
+          find bin/packages -name "kmod-nft-tproxy*.apk" -o -name "kmod-nft-socket*.apk" -o -name "kmod-tun*.apk" -o -name "kmod-nf-tproxy*.apk" -o -name "kmod-nf-socket*.apk" -o -name "kmod-tcp-bbr*.apk" 2>/dev/null | head
 
       - name: Collect kmods
         run: |
@@ -71,6 +72,7 @@ jobs:
           cp bin/targets/rockchip/armv8/packages/kmod-nf-tproxy*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-nf-socket*.apk /tmp/kmods/ 2>/dev/null || true
           cp bin/targets/rockchip/armv8/packages/kmod-nft-core*.apk /tmp/kmods/ 2>/dev/null || true
+          cp bin/targets/rockchip/armv8/packages/kmod-tcp-bbr*.apk /tmp/kmods/ 2>/dev/null || true
           # generic packages fallback
           find bin/packages -name "kmod-nft-tproxy*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           find bin/packages -name "kmod-nft-socket*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
@@ -78,6 +80,7 @@ jobs:
           find bin/packages -name "kmod-nf-tproxy*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           find bin/packages -name "kmod-nf-socket*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           find bin/packages -name "kmod-nft-core*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
+          find bin/packages -name "kmod-tcp-bbr*.apk" -exec cp {} /tmp/kmods/ \; 2>/dev/null || true
           echo "=== collected ==="
           ls -la /tmp/kmods/ || true
           echo "=== build.log tail ==="
